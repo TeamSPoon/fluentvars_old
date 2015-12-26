@@ -268,6 +268,7 @@ nb_var(N, V):- termsource(V), nb_linkval(N,V),put_attr(V,nb_var,N),nb_linkval(N,
 % Turn on extreme debugging
 %
 debug_attvars:- sinkmode(+debug_attvars+debug_extreme),!.
+nodebug_attvars:- sinkmode(-debug_attvars-debug_extreme),!.
 
 
 %% sinkmode(+Set) is det.
@@ -376,6 +377,7 @@ no_bind(Var):- mvar_set(Var,+no_bind).
 % Aggressively make attvars unify with non attvars (instead of the other way arround)
 %
 eagerly:- sinkmode(+eagerly+no_vmi).
+noeagerly:- eager_none.
 eager_all:- sinkmode(+eager_all+no_vmi).
 pass_ref:- sinkmode(+on_unify_linkval).
 eager_none:-  sinkmode(-eager_all-eagerly).
@@ -861,4 +863,4 @@ t2:- must_tst(rtrace( (freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Fo
    ignore(((\+ atom_concat('$',_,F),export(F/A)))),
    ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A)))))).
 
-:-debug_attvars.
+% :- debug_attvars.
