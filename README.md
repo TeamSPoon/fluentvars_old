@@ -2,14 +2,14 @@ Hopefully this note does not distract too much...
 
 When implementing the C support for Paul Tarau's  (TermsSink/TermSource) Fluents  I had scenarios I replaced one end of unify with a copy_term of the Var .. and then  ran wakeup/1 on that Copy thus leaving the original Var free to move on.   I know that sounds almost obscene and unsupportable .. However  it worked out just fine and as long as I was thinking the goal was to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. the attributed variable is willing to do a "check" on anything it unifies to letting "it decide" the ways in which it was to be manipulated.  It may internally change its resulting value and even change the other sides values (not forced into the other side's of unifications expectations)
 
-For example, we want the below to be true:
+For example, currently this is true:  
 
 ````
 ?-  freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Foo==break_me(cant).
 Foo = break_me(cant).
 ````
 
-This is a different piece of code but it shows the same heresy! 
+This new peice of code shows simular abnormality 
 
 ````
 %% subsumer_var(-X) is det.
