@@ -21,7 +21,7 @@ X = a(3).
 ````
 
 
-This library will explore examples of such possible chicanery as well as very usefully tricks that are available with TermSinks.
+This library will explore examples of such possible chicanery as well as other useful tricks that are available with TermSinks.
 
 
 ````
