@@ -11,7 +11,18 @@ Not so much, currently this is true:
 Foo = break_me(cant).
 ````
 
-This new peice of code shows simular abnormality 
+And it is even OK to have variables that are (in themselves) able to turn unification with '='/2 into a choice point factory.
+
+````
+?- when(nonvar(X),member(X,[a(1),a(2),a(3)])), !, X=a(_).
+X = a(1) ;
+X = a(2) ;
+X = a(3).
+````
+
+
+This library will explore examples of such possible chicanery as well as very usefully tricks that are available with TermSinks.
+
 
 ````
 %% subsumer_var(-X) is det.
@@ -53,14 +64,6 @@ accum_hook(accume_value(_Var,_M,P,Prev),Value):-  var(Value),!, nonvar(P), wno_h
 ````
 
 
-And it is even OK to have variables that are (in themselves)  able to turn unification with '='/2 into a choice point factory.
-````
-?- when(nonvar(X),member(X,[a(1),a(2),a(3)])), !, X=a(_).
-X = a(1) ;
-X = a(2) ;
-X = a(3).
-````
 
-This library will explore examples of such possible chicanery as well as very usefully tricks that are available with TermSinks.
 
 
