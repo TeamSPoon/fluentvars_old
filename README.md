@@ -1,7 +1,6 @@
 Attributed Prolog variables that may remain (Free) attributed prolog variables even after unifying with nonvars! 
-When implementing the C support for Paul Tarau's  (TermsSink/TermSource) Fluents this was   
 
-This works out just fine and as long as the programmer is thinking the goal was to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. the attributed variable is willing to do a "check" on anything it unifies to letting "it decide" the ways in which it will be manipulated by unification.  
+This can work out fine when the programmer is thinking the goal was to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. The attributed variable does a "check" durring unification and "it decides" (using hooks) the ways in which it will be manipulated by the unification.
 
 Sound bizare?
 
