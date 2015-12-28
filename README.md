@@ -127,11 +127,11 @@ X=6
 
 **fluent_sink(-Sink).**
 
-> #define X_no_bind 1 /* This tells C, even when asked to, to not bind the variable */
+--- #define X_no_bind 1 /* This tells C, even when asked to, to not bind the variable */
 
 **fluent_source(-Source)**
 
->  #define X_on_unify_keep_vars 6 /* when unifying with a variable call $wakeup/1 using the variable instead of being put inside the other variable (our verify_attributes or a better hook may, in this case, label that other var) */
+--- #define X_on_unify_keep_vars 6 /* when unifying with a variable call $wakeup/1 using the variable instead of being put inside the other variable (our verify_attributes or a better hook may, in this case, label that other var) */
 
 All composers start out decending for one or both constructors
 
@@ -163,11 +163,11 @@ set_persistent(Var,YesNo):-
     attvar_override(Var,-no_trail) .
 
 ````
-> #define X_no_trail 2 /* Do not bother to trail the attvars previous value */
+--- #define X_no_trail 2 /* Do not bother to trail the attvars previous value */
 
 `attvar_override(Fluent, +no_wakeup)`
 
-> #define X_no_wakeup 3 /* This tells C, it can skip calling $wakup/1  */
+--- #define X_no_wakeup 3 /* This tells C, it can skip calling $wakup/1  */
 
 ````
 dont_care(Fluent):-attvar_override(Fluent, +no_wakeup+no_trail+no_bind).
@@ -177,22 +177,22 @@ dont_care(Fluent):-attvar_override(Fluent, +no_wakeup+no_trail+no_bind).
 
 `attvar_override(Fluent, +peer_wakeup)`
 
->  #define X_peer_wakeup 5 /* schedule wakeup on other attvar's peers we unify with */
+---  #define X_peer_wakeup 5 /* schedule wakeup on other attvar's peers we unify with */
 
 `attvar_override(Fluent, +peer_trail)`
 
->  #define X_peer_trail 4 /* Trail any assignment we are about to make on other variables */
+---  #define X_peer_trail 4 /* Trail any assignment we are about to make on other variables */
 
 `attvar_override(Fluent, +peer_trail)`
 
->  #define X_on_unify_replace 7 /* unify does not replace the attvar.. but the other way around */
+---  #define X_on_unify_replace 7 /* unify does not replace the attvar.. but the other way around */
 
 #### Development modifiers
 
 Used like:  `attvar_override(Fluent,+no_vmi)` or `attvar_default(_,+no_vmi)`
 
 /* per var overloaded */
-> #define X_disabled 0 /* Usually for enable the interp to run recursively not calling $wakeup (implies no_inherit) so that C may do our assignments instead of $wakeup */
+--- #define X_disabled 0 /* Usually for enable the interp to run recursively not calling $wakeup (implies no_inherit) so that C may do our assignments instead of $wakeup */
 #define X_no_inherit 8 /* this term sink doesn't not inherit flags */
 #define X_uses_eager 9 /* this variable would like a chance to implement term comparison operators itself */ 
 #define X_debug_attvars 10 /* print extra debug for ourselves */
@@ -205,14 +205,14 @@ Used like:  `attvar_override(Fluent,+no_vmi)` or `attvar_default(_,+no_vmi)`
 attvar_default(`equal`,`eager`).  /* to make  ==/2 trigger a call to 
 ` eager_lr(equal,AttVar,Value)`  or  `eager_rl(equal,AttVar,Value) ` */
 
-> #define WHEN_per_var_eager 0
+--- #define WHEN_per_var_eager 0
 #define WHEN_eager 0
 #define WHEN_normal 1
 #define WHEN_override 1
 #define WHAT_unify 0 /*  eager(=) */
 #define WHAT_equal 1 /*  eager(==) call can_unify for isomorphic testing on specialAttibutedVars */
 
-> #define WHAT_variant 2 /*  eager(=@=) */
+--- #define WHAT_variant 2 /*  eager(=@=) */
 #define WHAT_unifiable 3 /*  eager(unifiable) */
 #define WHAT_assignment 4 /* prioritize assignment  */
 #define WHAT_copy_term 5 /*  eager(copy_term) */
