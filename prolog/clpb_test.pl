@@ -1,7 +1,5 @@
 :- use_module(library(clpb)).
-:- use_module(library(logicmoo_utils)).
 :- ensure_loaded(shower).
-:- ensure_loaded(termsink_test).
 
 sat(_)  --> [].
 sat(X*Y) --> [_], sat(X), sat(Y).

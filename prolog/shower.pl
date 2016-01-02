@@ -1,5 +1,4 @@
 :- use_module(library(clpfd)).
-:- use_module(library(logicmoo_utils)).
 :- [clpb_test].
 
 shower(S, Done) :-
