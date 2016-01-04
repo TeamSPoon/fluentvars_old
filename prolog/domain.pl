@@ -69,7 +69,7 @@ domain(Z,[1,6,7,8]) ?
 yes
 
 
-% SWI FAILS this test. (so far)
+% SWI PASSES this test.
 | ?- domain(X,[5,6,7,1]), domain(Y,[3,4,5,6]), domain(Z,[1,6,7,8]), X=Y, Y=Z.
 
 X = 6,
