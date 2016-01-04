@@ -1,0 +1,51 @@
+
+%:- import put_atts/2, get_atts/2 from atts.
+:- use_module(library(atts)).
+:- use_module(libary(xsb_compat)).
+
+%:- import attv_unify/2 from machine.
+%:- import member/2 from basics.
+
+:- attribute dom/1.
+
+verify_attributes(Var, Value) :-
+        get_atts(Var, dom(Da)),
+        (var(Value)                          % Value is an attributed variable
+         -> get_atts(Value, dom(Db)),        % has a domain
+            intersection(Da, Db, [E|Es]),    % intersection not empty
+            (Es = []                         % exactly one element
+             -> attv_unify(Var, Value),      % bind Var to Value
+                attv_unify(Var, E)           % bind Var (and Value) to E
+             ;  attv_unify(Var, Value),      % bind Var to Value
+                put_atts(Value, dom([E|Es])) % update Var's (and Value's)
+                                             % attributes
+            )
+         ;  member(Value, Da),               % is Value a member of Da?
+            attv_unify(Var, Value)           % bind Var to Value
+        ).
+
+intersection([], _, []).
+intersection([H|T], L2, [H|L3]) :-
+        member(H, L2), !,
+        intersection(T, L2, L3).
+intersection([_|T], L2, L3) :-
+        intersection(T, L2, L3).
+
+domain(X, Dom) :- 
+        var(Dom), !, 
+        get_atts(X, dom(Dom)). 
+domain(X, List) :- 
+        List = [El|Els],                     % at least one element 
+        (Els = []                            % exactly one element
+         -> X = El                           % implied binding 
+         ;  put_atts(Fresh, dom(List)),      % create a new attributed variable
+            X = Fresh                        % may call verify_attributes/2
+        ).
+
+show_domain(X) :-                            % print out the domain of X
+        var(X),                              % X must be a variable
+        get_atts(X, dom(D)),
+        write('Domain of '), write(X),
+        write(' is '), writeln(D).
+
+

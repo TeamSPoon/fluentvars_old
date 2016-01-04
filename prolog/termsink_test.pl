@@ -49,9 +49,9 @@
 :- meta_predicate fluent_call(1,0).
 
 
-:- use_module(library(fluent_vars)).
+:- user:use_module(library(fluent_vars)).
 :- listing('$attvar':'$wakeup'/1).
-:- listing('$attvar':do_wokens//1).
+:- listing('$attvar':collect_all_va_goal_lists//1).
 :- debug(_).
 :- debug(fluents).
 :- debug(attvars).
@@ -443,9 +443,9 @@ no_bind(Fluent):- fluent_override(Fluent,+no_bind).
 %
 % Aggressively make fluents unify with non fluents (instead of the other way arround)
 %
-eagerly:- fluent_default(+eagerly+no_vmi).
+eagerly:- fluent_default(+eagerly+check_vmi).
 noeagerly:- override_none.
-override_all:- fluent_default(+override_all+no_vmi).
+override_all:- fluent_default(+override_all+check_vmi).
 pass_ref:- fluent_default(+on_unify_replace).
 override_none:-  fluent_default(-override_all-eagerly).
 
