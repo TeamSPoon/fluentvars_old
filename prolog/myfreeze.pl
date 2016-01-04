@@ -4,7 +4,7 @@
 :- module(myfreeze, [myfreeze/2]).
 
 :- use_module(library(atts)).
-:- use_module(domain).
+:- user:use_module(domain).
 
 :- attribute frozen/1.
 
