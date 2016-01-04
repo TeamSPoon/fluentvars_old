@@ -66,7 +66,7 @@
 :- meta_predicate w_dmvars(+).
 :- meta_predicate w_debug(+).
 :- module_transparent((
-  wno_fluents/1,w_fluents/1,w_fluents/2,
+  wno_fluents/1,w_fluents/1,w_fbs/2,
   wno_dmvars/1,w_dmvars/1,
   wno_debug/1,w_debug/1)).
  
@@ -75,38 +75,29 @@
 
 :- multifile(user:fluent_hook/4).
 :- dynamic(user:fluent_hook/4).
-user:fluent_hook(Pred,Var,Value,List):-dmsg(user:fluent_hook(Pred,Var,Value,List)),fail.
-fluent_hook
+user:fluent_hook(Pred,Var,Value,RetCode):-dmsg(user:fluent_hook(Pred,Var,Value,RetCode)),fail.
+
 
 % TODO BEGIN remove before master
 
 :- [swi(boot/attvar)].
+:- redefine_system_predicate('$attvar': collect_va_goal_list/5).
+:- abolish('$attvar': collect_va_goal_list/5).
+% Disables extended Fluent/Attvar wakeups and hooks durring processing.
+'$attvar':collect_va_goal_list(A,B,C,D,E):- wno_fluents(fixed_collect_va_goal_list(A,B,C,D,E)).
 
-:- redefine_system_predicate('$attvar':'$wakeup'/1).
-% :- abolish('$attvar':'$wakeup'/1).
-'$wakeup'(Wakes):- 
-      wno_fluents(collect_all_va_goal_lists(Wakes,Goals,[])),
-      % smsg(Wakes:-Goals), % usefull for seeing va groups  
-      map_goals(Goals).
-
-:- redefine_system_predicate('$attvar':collect_va_goal_list/5).
-:- abolish('$attvar':collect_va_goal_list/5).
-'$attvar':collect_va_goal_list(_, Var , Value) --> {\+ attvar(Var),!,Var=Value}.
-'$attvar':collect_va_goal_list(att(Module, AttVal, Rest), Var, Value) --> !,
-        {dmsg(att(Module, _AttVal, Rest))},
+fixed_collect_va_goal_list(_, Var , Value) --> {\+ attvar(Var),!,Var=Value}.
+fixed_collect_va_goal_list(att(Module, AttVal, Rest), Var, Value) --> !,
+        {dmsg(att(Module, AttVal, Rest))},
         { wo_fluent(Var,w_fluents(Module:verify_attributes(Var, Value, Goals))) },
         '$attvar':goals_with_module(Goals, Module),
-        % [Module:attr_unify_hook(AttVal,Value)],
-        '$attvar':collect_va_goal_list(Rest, Var, Value).
-
-'$attvar':collect_va_goal_list([],_,_) --> !.
-'$attvar':collect_va_goal_list(Pred,Var,Value) --> 
+        fixed_collect_va_goal_list(Rest, Var, Value).
+fixed_collect_va_goal_list([],_,_) --> !.
+fixed_collect_va_goal_list(Pred,Var,Value) --> 
     {wo_fluent(Var,w_fluents(user:fluent_hook(Pred,Var,Value,List)))*->true;List=[]},
     List.
+
 % TODO END remove before master
-
-% scheduleFluent()
-
 
 
 '$fluent_default'(G,S):-'$fluent_default'(G,S,I,I).
