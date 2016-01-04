@@ -1,7 +1,9 @@
 
+:- module(fd,[domain/2,show_domain/1]).
+
 %:- import put_atts/2, get_atts/2 from atts.
 :- use_module(library(atts)).
-:- use_module(libary(xsb_compat)).
+:- use_module(library(xsb_attvars)).
 
 %:- import attv_unify/2 from machine.
 %:- import member/2 from basics.
@@ -48,4 +50,43 @@ show_domain(X) :-                            % print out the domain of X
         write('Domain of '), write(X),
         write(' is '), writeln(D).
 
+
+
+/*
+
+The output of some example queries are listed below, from 
+which we can see how attributed variables are unified using verify_attributes/2:
+
+root@gitlab:~/lib/swipl/pack/fluentvars/prolog# swipl -l fd.P
+Welcome to SWI-Prolog (Multi-threaded, 64 bits, Version 7.3.14-41-ga3b985d-DIRTY)
+Copyright (c) 1990-2015 University of Amsterdam, VU Amsterdam
+SWI-Prolog comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under certain conditions.
+Please visit http://www.swi-prolog.org for details.
+
+For help, use ?- help(Topic). or ?- apropos(Word).
+
+?- domain(X,[5,6,7,1]), domain(Y,[3,4,5,6]), domain(Z,[1,6,7,8]),
+|             show_domain(X), show_domain(Y), show_domain(Z).
+Domain of _G66 is [5,6,7,1]
+Domain of _G81 is [3,4,5,6]
+Domain of _G96 is [1,6,7,8]
+put_attr(X, fd, [dom([5, 6, 7, 1])]),
+put_attr(Y, fd, [dom([3, 4, 5, 6])]),
+put_attr(Z, fd, [dom([1, 6, 7, 8])]).
+
+?-  domain(X,[5,6,7,1]), domain(Y,[3,4,5,6]), domain(Z,[1,6,7,8]),
+|             X = Y, show_domain(X), show_domain(Y), show_domain(Z).
+Domain of _G259 is [5,6]
+Domain of _G259 is [5,6]
+Domain of _G289 is [1,6,7,8]
+X = Y,
+put_attr(Y, fd, [dom([5, 6])]),
+put_attr(Z, fd, [dom([1, 6, 7, 8])]).
+
+?-  domain(X,[5,6,7,1]), domain(Y,[3,4,5,6]), domain(Z,[1,6,7,8]),
+|             X = Y, Y = Z.
+X = Y, Y = Z, Z = 6.
+
+*/
 

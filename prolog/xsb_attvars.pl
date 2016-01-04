@@ -1,3 +1,6 @@
+
+:- module(machine,[attv_unify/2]).
+
 /*
 
 Example XSB Support
@@ -30,5 +33,4 @@ system:verify_attributes(Var, Value, []):-
       context_module(Mod),
       Mod:verify_attributes(Var, Value).
                
-
 
