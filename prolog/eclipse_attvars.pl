@@ -74,14 +74,16 @@
 :- meta_predicate(put_pairs(+,:)).
 :- meta_predicate(dict_attvar(:)).
 :- meta_predicate(dict_attvar(:,-)).
-:- meta_predicate wno_hooks(0).
-:- meta_predicate wno_dmvars(0).
-:- meta_predicate wno_debug(0).
-:- meta_predicate w_hooks(0).
 :- meta_predicate wi_atts(+,0).
-:- meta_predicate w_dmvars(0).
-:- meta_predicate w_debug(0).
 
+:- meta_predicate w_hooks(0).
+:- meta_predicate wno_hooks(0).
+:- meta_predicate w_dmvars(0).
+:- meta_predicate wno_dmvars(0).
+:- meta_predicate w_debug(0).
+:- meta_predicate wno_debug(0).
+
+\
 % TODO BEGIN remove before master
 
 :- meta_predicate must_tst_det(0).
@@ -120,11 +122,6 @@ nh_collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
         
 nh_collect_va_goals([],_,_) --> [].
 
-% TODO END remove before master
-
-
-
-:- use_module(library(ordsets)).
 
 
 /*
@@ -132,6 +129,13 @@ nh_collect_va_goals([],_,_) --> [].
 SWI-Prolog fluent patch in implements all of the C support! https://github.com/logicmoo/swipl-devel/
 
 */
+
+% TODO END remove before master
+
+
+
+:- use_module(library(ordsets)).
+
 
 /*
 unify:
@@ -144,7 +148,7 @@ If an attributed variable is unified with a standard variable, the variable is b
 meta_handler_name(unify).
 
 /*
-test_unify:   verify_attributes/3 TODO
+test_unify:   REDIRECT ==  verify_attributes/3 TODO
 a unifiability test which is not supposed to trigger constraints propagation. It is used by the not_unify/2 predicate. The handler procedure is
 test_unify_handler(+Term, ?Attribute)
 where the arguments are the same as for the unify handler. The handler’s job is to determine whether Attribute allows unification with Term (not considering effects of woken goals). During the execution of the handler, the attributed variable may be bound to Term, however when all attribute handlers succeed, all bindings are undone again, and no waking occurs.
@@ -152,7 +156,7 @@ where the arguments are the same as for the unify handler. The handler’s job is 
 meta_handler_name(test_unify).
 
 /*
-compare_instances:  C is done in branch 'tarau' - PROLOG TODO
+compare_instances:  C is done in branch 'eclipse_c' - PROLOG TODO
 computation of instance, subsumption and variance relationship, as performed by the built-ins compare_instances/3, instance/2 and variant/2. The handler procedure is
 instance_handler(-Res, ?TermL, ?TermR)
 and its arguments are similar to the ones of the compare_instances/3 predicate. The handler is invoked with one or both of TermL and TermR being attributed variables. The task of the handler is to examine the two terms, and compute their instance relationship with respect to the extension attribute in question. The handler must bind Res to = iff the terms are variants, < iff TermL is a proper instance of TermR, or > iff TermR is a proper instance of TermL) with respect to the attribute under consideration. If the terms are not unifiable with respect to this attribute, the handler must fail.
@@ -161,7 +165,7 @@ Even though one of TermL and TermR is guaranteed to be an attributed variable, t
 meta_handler_name(compare_instances).
 
 /*
-copy_term:  C is done in branch 'tarau' - PROLOG TODO
+copy_term:  C is done in branch 'eclipse_c' - PROLOG TODO
 the handler is invoked by either copy_term/2 or copy_term_vars/3. The handler procedure is
 copy_handler(?AttrVar, ?Copy)
 AttrVar is the attributed variable encountered in the copied term, Copy is its corresponding variable in the copy. All extension handlers receive the same arguments. This means that if the attributed variable should be copied as an attributed variable, the handler must check if Copy is still a free variable or if it was already bound to an attributed variable by a previous handler.
@@ -170,16 +174,15 @@ meta_handler_name(copy_term).
 meta_handler_name(copy_term_nat).
 
 /*
-suspensions:  PROLOG ONLY - TODO
+suspensions:  REDIRECT ==  attribute_goals//1
 this handler is invoked by the suspensions/2 predicate to collect all the suspension lists inside the attribute. The handler call pattern is
 suspensions_handler(?AttrVar, -ListOfSuspLists, -Tail)
 AttrVar is an attributed variable. The handler should bind ListOfSuspLists to a list containing all the attribute’s suspension lists and ending with Tail.
 */
 meta_handler_name(suspensions).
 
-
 /*
-delayed_goals_number:   PROLOG ONLY - TODO
+delayed_goals_number:   REDIRECT ==  attribute_goals//1 (count)
 handler is invoked by the delayed_goals_number/2 predicate. The handler call pattern is
 delayed_goals_number_handler(?AttrVar, -Number)
 AttrVar is the attributed variable encountered in the term, Number is the number of delayed goals occurring in this attribute. Its main purpose is for the first-fail selection predicates, i.e., it should return the number of constraints imposed on the variable.
@@ -199,7 +202,7 @@ The handler is only invoked if the variable has the corresponding (non-empty) at
 */
 
 /*
-print:   DONE
+print:   REDIRECT ==  portray_attvar/1
 attribute printing in write/1,2, writeln/1,2, printf/2,3 when the m option is specified. The handler procedure is
 print_handler(?AttrVar, -PrintAttr)
 AttrVar is the attributed variable being printed, PrintAttr is the term which will be printed as a value for this attribute, prefixed by the attribute name. If no handler is specified for an attribute, or the print handler fails, the attribute will not be printed.
@@ -208,7 +211,7 @@ The following handlers are still supported for compatibility, but their use is n
 meta_handler_name(print).
 
 /*
-pre_unify:  PROLOG ONLY - TODO
+pre_unify:  REDIRECT ==  verify_attributes/3
 this is another handler which can be invoked on normal unification, but it is called before the unification itself occurs. The handler procedure is
 pre_unify_handler(?AttrVar, +Term)
 The first argument is the attributed variable to be unfied, the second argument is the term it is going to be unified with. This handler is provided only for compatibility with SICStus Prolog and its use is not recommended, because it is less efficient than the unify handler and because its semantics is somewhat unclear, there may be cases where changes inside this handler may have unexpected effects.
@@ -216,7 +219,7 @@ The first argument is the attributed variable to be unfied, the second argument 
 meta_handler_name(pre_unify).
 
 /*
-delayed_goals:  PROLOG ONLY - TODO
+delayed_goals:     REDIRECT == attribute_goals//1
 this handler is superseded by the suspensions-handler, which should be preferred. If there is no suspensions- handler, this handler is invoked by the obsolete delayed_goals/2 predicate. The handler procedure is
 delayed_goals_handler(?AttrVar, ?GoalList, -GoalCont)
 AttrVar is the attributed variable encountered in the term, GoalList is an open-ended list of all delayed goals in this attribute and GoalCont is the tail of this list.
@@ -257,12 +260,12 @@ Name is an atom denoting the attribute name and usually it is the name of the mo
 
 new_meta_attribute(Base,V,M) :- (var(Base);var(M);var(V)), !, throw(error(instantiation_error,'meta_attribute'(Base,M:V))).
 new_meta_attribute(Base,Na/Ar,Mod) :- !, functor(At,Na,Ar),new_meta_attribute(Base,At,Mod).
-%UNDO new_meta_attribute(Base,Mod:ANY,_) :- !, new_meta_attribute(Base,ANY,Mod).
+new_meta_attribute(Base,Mod:ANY,_) :- \+ meta_handler_name(Mod),!, new_meta_attribute(Base,ANY,Mod).
 new_meta_attribute(_,[],_).
 new_meta_attribute(Base,(At1,At2),M) :- new_meta_attribute(Base,At1,M), new_meta_attribute(Base,At2,M).
 new_meta_attribute(Base,[At1|At2],M) :- new_meta_attribute(Base,At1,M), new_meta_attribute(Base,At2,M).
 
-new_meta_attribute(Base,P:At,Mod) :- dynamic(Mod:meta_hook/3),
+new_meta_attribute(Base,P:At,Mod) :- assertion(meta_handler_name(P)),dynamic(Mod:meta_hook/3),
   (Mod:meta_hook(Base,P,At) -> true; asserta(Mod:meta_hook(Base,P,At))).
 
 new_meta_attribute(Base,At,Mod) :- dynamic(Mod:protobute/3),
@@ -360,8 +363,8 @@ pair_get(Var,user,Atts):-var(Atts),!,get_attrs(Var,Attr),attrs_to_pairs(Attr,Att
 % pair_get(Var,M,At):-var(At),!,get_attr(Var,M,At).
 pair_get(Var,M,List):-is_list(List),!,maplist(pair_get(Var,M),List).
 pair_get(Var,M,+At):- !,pair_get(M,Var,At).
-%UNDO pair_get(Var,_,-(M:At)):- !,pair_get(Var,M,-At).
-%UNDO pair_get(Var,_, (M:At)):- !,pair_get(Var,M,At).
+pair_get(Var,_,-(M:At)):- \+ meta_handler_name(M), !,pair_get(Var,M,-At).
+pair_get(Var,_, (M:At)):- \+ meta_handler_name(M), !,pair_get(Var,M,At).
 pair_get(Var,M,-At):-!,
    pair_exist(M,At),
    (get_attr(Var,M,Cur)->
@@ -377,8 +380,8 @@ pair_get(Var,M,At):-
 pair_put(_,M,At):-var(At),!,throw(error(instantiation_error,put_pairs(M:At))).
 pair_put(Var,M,List):-is_list(List),!,pair_module(Var,M),maplist(pair_put(Var,M),List).
 pair_put(Var,M,+At):- !,pair_put(M,Var,At).
-%UNDO pair_put(Var,_,-(M:At)):- !,pair_put(Var,M,-At).
-%UNDO pair_put(Var,_, (M:At)):- !,pair_put(Var,M,At).
+pair_put(Var,_,-(M:At)):- \+ meta_handler_name(M),!,pair_put(Var,M,-At).
+pair_put(Var,_, (M:At)):- \+ meta_handler_name(M), !,pair_put(Var,M,At).
 pair_put(Var,M,-Pair):-!,
   pair_to_att(Pair,Tmpl),
    pair_exist(M,Tmpl),
@@ -460,20 +463,25 @@ get_attribute(Var, Attr):- get_atts(Var, Attr).
 
 get_hander(Var,Hook,Handler):- get_attr(Var,Hook,Handler).
 
-do_matts_hook(Hook,Var,Value,1):-get_hander(Var,Hook,Handler),!,call(Handler,A,B).
-do_matts_hook(Pred,Var,Value,RetCode):-notrace((dmsg(user:matts_hook(Pred,Var,Value,RetCode)),fail)).
+% unbind return code
 do_matts_hook(Pred,Var,Value,RetCode):-nonvar(RetCode),!,do_matts_hook(Pred,Var,Value,RetCode0),RetCode0=RetCode.
+% print debug
+do_matts_hook(Pred,Var,Value,RetCode):-notrace((dmsg(user:matts_hook(Pred,Var,Value,RetCode)),fail)).
+% Search for handler PER Var
+do_matts_hook(Hook,Var,Value,1):-get_hander(Var,Hook,Handler),!,call(Handler,Var,Value).
+% 0: == call handler
 do_matts_hook(compare,Var,Value,0):- do_matts_hook(==,Var,Value,1),!.
+% call back
+do_matts_hook(compare,Var,Value,RetCode):- compare(Res,Value,Var),compare_to_retcode(Res,RetCode),!.
+
 do_matts_hook('==',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),BA==AA,!.
 do_matts_hook(Hook,A,B,1):-get_val(A,AA),w_hooks(call(Hook,AA,B)).
 do_matts_hook('==',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),!,BA=@=AA.
 do_matts_hook('=@=',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),!,BA=@=AA.
-do_matts_hook(compare,Var,Value,RetCode):- compare(Res,Value,Var),compare_to_retcode(Res,RetCode),!.
 
 compare_to_retcode(>,1).
 compare_to_retcode(<,-1).
 compare_to_retcode(==,0).
-
 
 
 attrs_val(Var,AttsO):-'$visible_attrs'(Var,AttsO).
@@ -504,7 +512,7 @@ matts(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matt
 % Set system wide matts modes
 %
 % == 
-% ?-listing(bits_for_hooks_default/1) to see them.
+% ?-listing(fbs_for_hooks_default/1) to see them.
 % ==
 
 matts(X):- integer(X),!,'$matts_default'(_,X),matts.
@@ -512,7 +520,7 @@ matts(X):- var(X),!,'$matts_default'(X,X).
 matts(X):- '$matts_default'(M,M),merge_fbs(X,M,XM),must_tst('$matts_default'(_,XM)),!,matts,!.
 
 
-bits_for_hooks_default(v(
+fbs_for_hooks_default(v(
 
 /* '$atts' = 18 AttVarBitS: these bits in an prolog accessable  get_attr/3,putt_attr/3 need it fit in valInt()*/
   no_bind              = 0x0001, "C should let wakeup/1 do binding",
@@ -531,7 +539,8 @@ bits_for_hooks_default(v(
   strict_equal     = 0x0400, "Allows AttVars to implement their own structurally equivalence",
   at_equals        = 0x0800, "Allows AttVars to implement their own variant-ness",
   no_inherit     =  0x1000, "This AttVar doest not inherit from matts flags (otherwise they are or-ed)",
-  copy_term      =  0x2000, "UNUSED override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
+  copy_term      =  0x2000, "override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
+  copy_term_nat  =  0x2000, "override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
   compare        =  0x4000, "UNUSED override(compare) would allow AttVars to decide their non-standard ordering against each other",
   disabled       =  0x8000, "Treat this AttVar as a non attributed variable (allow the system to operate recusively.. implies no_inherit) ",
   check_vmi      = 0x010000, "LD->slow_unify might need tp be true for us to work (mostly for testing)",
@@ -615,7 +624,7 @@ contains_fbs(AttVar,Bit):- any_to_fbs(AttVar,Bits),!,member(Bit,Bits).
 % any_to_fbs(Var,BitsOut):- attvar(Var), get_attr(Var,'$mattr',BitsIn),!,any_to_fbs(BitsIn,BitsOut).
 any_to_fbs(BitsIn,BitsOut):- notrace((
  must((fbs_to_number(BitsIn,Mode),number(Mode))),
-   Bits=[Mode],bits_for_hooks_default(MASKS),
+   Bits=[Mode],fbs_for_hooks_default(MASKS),
    ignore((arg(_,MASKS,(N=V)),nonvar(V),nonvar(N),fbs_to_number(V,VV), VV is VV /\ Mode , matts_vars:nb_extend_list(Bits,N),fail)),!,
    BitsOut = Bits)).
 
@@ -654,9 +663,9 @@ fbs_to_number(-(Bit),VVV):-fbs_to_number((Bit),V),!,VVV is ( \ V).
 fbs_to_number(~(Bit),VVV):-fbs_to_number((Bit),V),!,VVV is ( \ V).
 fbs_to_number( \ (Bit),VVV):-fbs_to_number((Bit),V),!,VVV is ( \ V).
 fbs_to_number(bit(Bit),VVV):- number(Bit),!,VVV is 2 ^ (Bit).
-fbs_to_number((Name),VVV):-bits_for_hooks_default(VV),arg(_,VV,Name=Bit),!,must_tst(fbs_to_number(Bit,VVV)),!.
-fbs_to_number((Name),VVV):-bits_for_hooks_default(VV),arg(_,VV,override(Name)=Bit),!,must_tst(fbs_to_number(Bit,VVV)),!.
-fbs_to_number(override(Name),VVV):-bits_for_hooks_default(VV),arg(_,VV,(Name)=Bit),!,must_tst(fbs_to_number(Bit,VVV)),!.
+fbs_to_number((Name),VVV):-fbs_for_hooks_default(VV),arg(_,VV,Name=Bit),!,must_tst(fbs_to_number(Bit,VVV)),!.
+fbs_to_number((Name),VVV):-fbs_for_hooks_default(VV),arg(_,VV,override(Name)=Bit),!,must_tst(fbs_to_number(Bit,VVV)),!.
+fbs_to_number(override(Name),VVV):-fbs_for_hooks_default(VV),arg(_,VV,(Name)=Bit),!,must_tst(fbs_to_number(Bit,VVV)),!.
 fbs_to_number([A],VVV):-!,fbs_to_number(A,VVV).
 fbs_to_number([A|B],VVV):-!,merge_fbs(B,A,VVV).
 fbs_to_number(V,VVV) :- VVV is V.
@@ -681,6 +690,7 @@ undo(G):- C=call(G),setup_call_cleanup(true,(true;(G,nb_setarg(1,C,true),fail)),
 
 
 mcc(Goal,CU):- Goal*-> CU ; (once(CU),fail).
+
 
 %%    wi_atts(Hooks,Goal)
 %
@@ -738,12 +748,13 @@ test(cmp_fbs_variants3):-
  put_attr(Y,'$atts',1),
    wi_atts(+variant,X=@=Y).
 
+:- set_prolog_flag(atts_declared,auto).
 
 
 system:term_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true),dict_attvar(Dict,X).
 system:goal_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true),dict_attvar(Dict,X).
 
-:- set_dict_attvar_reader(true).
+% :- set_dict_attvar_reader(true).
 
 
 
