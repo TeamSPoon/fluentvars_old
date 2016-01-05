@@ -37,6 +37,9 @@
 
 
 
+:- nodebug(fluents).
+
+
 %%	sink_fluent(-Fluent) is det.
 %
 % Base class of "SinkFluent" that recieves bindings
