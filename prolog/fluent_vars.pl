@@ -83,19 +83,20 @@ user:fluent_hook(Pred,Var,Value,RetCode):-dmsg(user:fluent_hook(Pred,Var,Value,R
 :- [swi(boot/attvar)].
 :- redefine_system_predicate('$attvar': collect_va_goal_list/5).
 :- abolish('$attvar': collect_va_goal_list/5).
-% Disables extended Fluent/Attvar wakeups and hooks durring processing.
-'$attvar':collect_va_goal_list(A,B,C,D,E):- wno_fluents(fixed_collect_va_goal_list(A,B,C,D,E)).
 
-fixed_collect_va_goal_list(_, Var , Value) --> {\+ attvar(Var),!,Var=Value}.
-fixed_collect_va_goal_list(att(Module, AttVal, Rest), Var, Value) --> !,
-        {dmsg(att(Module, AttVal, Rest))},
-        { wo_fluent(Var,w_fluents(Module:verify_attributes(Var, Value, Goals))) },
-        '$attvar':goals_with_module(Goals, Module),
-        fixed_collect_va_goal_list(Rest, Var, Value).
-fixed_collect_va_goal_list([],_,_) --> !.
-fixed_collect_va_goal_list(Pred,Var,Value) --> 
-    {wo_fluent(Var,w_fluents(user:fluent_hook(Pred,Var,Value,List)))*->true;List=[]},
-    List.
+% This wrapper Disables extended Fluent/Attvar wakeups and hooks durring processing.
+'$attvar':collect_va_goal_list(A,B,C,D,E):- wno_fluents(safe_collect_va_goal_list(A,B,C,D,E)).
+
+
+safe_collect_va_goal_list(att(Module, _AttVal, Rest), Var, Value) -->
+	(   { attvar(Var) }
+	% Temp re-eablement for all other vars but the addvar
+	->  { wo_fluents(w_fluents(Module:verify_attributes(Var, Value, Goals))) },
+	    '$attvar':goals_with_module(Goals, Module)
+	;   []
+	),
+        safe_collect_va_goal_list(Rest, Var, Value).
+safe_collect_va_goal_list([],_,_) --> [].
 
 % TODO END remove before master
 
