@@ -189,19 +189,31 @@ user:matts_hook(Pred,Var,Value,RetCode):-dmsg(user:matts_hook(Pred,Var,Value,Ret
 % TODO BEGIN remove before master
 
 :- [swi(boot/attvar)].
-:- redefine_system_predicate('$attvar': collect_va_goal_list/5).
-:- abolish('$attvar': collect_va_goal_list/5).
-% Disables extended AttVar/Attvar wakeups and hooks durring processing.
-'$attvar':collect_va_goal_list(A,B,C,D,E):- wno_hooks(fixed_collect_va_goal_list(A,B,C,D,E)).
+:- redefine_system_predicate('$attvar': collect_all_va_goal_lists/3).
+:- abolish('$attvar': collect_all_va_goal_lists/3).
 
-fixed_collect_va_goal_list(_, Var , Value) --> {\+ attvar(Var),!,Var=Value}.
-fixed_collect_va_goal_list(att(Module, AttVal, Rest), Var, Value) --> !,
-        {dmsg(att(Module, AttVal, Rest))},
-        % disable the Var hooks but enable the system again 
-        { wo_hooks(Var,w_hooks(Module:verify_attributes(Var, Value, Goals))) },
-        '$attvar':goals_with_module(Goals, Module),
-        fixed_collect_va_goal_list(Rest, Var, Value).
-fixed_collect_va_goal_list([],_,_) --> []
+% Disables extended AttVar/Attvar wakeups and hooks durring processing.
+
+'$attvar':collect_all_va_goal_lists(A,B,C):- wno_hooks(nh_collect_all_va_goal_lists(A,B,C)).
+
+nh_collect_all_va_goal_lists([]) --> [].
+nh_collect_all_va_goal_lists(wakeup(Var, Att3s, Value, Rest)) -->
+        ['$attvar_assign'(Var,Value)],
+	collect_va_goals(Att3s, Var, Value),
+        collect_all_va_goal_lists(Rest).
+
+collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
+	({ attvar(Var) }
+	-> 
+           % Disables the attvar from further event processing then re-enables the rest of the system
+           ({ wo_hooks(Var,w_hooks(Module:verify_attributes(Var, Value, Goals))) },
+               collect_va_goals(Rest, Var, Assignment, Value)
+           )
+        ;
+        []).
+        
+collect_va_goals([],_,_) --> [].
+
 
 % TODO END remove before master
 
