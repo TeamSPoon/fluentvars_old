@@ -177,6 +177,11 @@ X{a:A, b:B, c:C}.
 :- meta_predicate w_debug(0).
  
 
+/*  realized porting atts.pl (to C) takes me about 3 hours (Jan proably 1/2 hour or less)
+  pl2am.pl (DONE) +  am2j.pl (converting to C macros for SWI about total of 8 hours )..  
+  second option is much more wise
+*/
+
 :- nodebug(matts).
 
 :- multifile(user:matts_hook/4).
@@ -210,7 +215,7 @@ nh_collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
 	({ attvar(Var) }
 	-> 
            ({ wo_hooks(Var,w_hooks(Module:verify_attributes(Var, Value, Goals))) },
-              goals_with_module(Goals, Module),
+              '$attvar':goals_with_module(Goals, Module),
                nh_collect_va_goals(Rest, Var, Value)
            )
         ;
@@ -418,15 +423,15 @@ mcc(Goal,CU):- Goal*-> CU ; (once(CU),fail).
 %
 % With inherited Hooks call Goal
 
-wi_atts(M,Goal):- ('$matts_default'(W,W),merge_fbs(M,W,N),while_goal('$matts_default'(W,N),Goal,'$matts_default'(_,W)).
+wi_atts(M,Goal):- '$matts_default'(W,W),merge_fbs(M,W,N),while_goal('$matts_default'(W,N),Goal,'$matts_default'(_,W)).
 
 %%    wo_hooks(+Var,+Goal)
 %
 % Without hooks on Var call Goal
-wo_hooks(Var,Goal):- 
-  get_attr(Var,'$matts',W),T is W \/ 0x8000,
+wo_hooks(Var,Goal):-
+  get_attr(Var,'$matts',W),T is W \/ 0x8000,!,
    while_goal(put_attr(Var,'$matts',T),Goal,put_attr(Var,'$matts',W)).
-
+wo_hooks(_Var,Goal):-Goal.
 
 
 wno_dmvars(Goal):- wno_hooks(wno_debug(Goal)).
