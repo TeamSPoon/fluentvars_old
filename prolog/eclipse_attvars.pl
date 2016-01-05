@@ -177,16 +177,11 @@ X{a:A, b:B, c:C}.
 :- meta_predicate w_debug(0).
  
 
-/*  realized porting atts.pl (to C) takes me about 3 hours (Jan proably 1/2 hour or less)
-  pl2am.pl (DONE) +  am2j.pl (converting to C macros for SWI about total of 8 hours )..  
-  second option is much more wise
-*/
-
 :- nodebug(matts).
 
 :- multifile(user:matts_hook/4).
 :- dynamic(user:matts_hook/4).
-user:matts_hook(Pred,Var,Value,RetCode):-dmsg(user:matts_hook(Pred,Var,Value,RetCode)),fail.
+user:matts_hook(Pred,Var,Value,RetCode):-trace,dmsg(user:matts_hook(Pred,Var,Value,RetCode)),fail.
 
 
 % TODO BEGIN remove before master

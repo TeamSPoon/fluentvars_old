@@ -50,6 +50,8 @@
 
 
 :- user:use_module(library(fluent_vars)).
+:- user:use_module(library(atts)).
+:- user:use_module(library(eclipse_attvars)).
 :- listing('$attvar':'$wakeup'/1).
 :- listing('$attvar':collect_all_va_goal_lists//1).
 :- debug(_).
