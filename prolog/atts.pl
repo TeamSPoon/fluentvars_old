@@ -62,7 +62,6 @@
 % and not left just to those editing these files.  Still we need to pick a default.
 
 
-:- dynamic protobute/1.
 
 %%    attribute(+AttributeSpec).
 %
@@ -76,12 +75,14 @@
 'attribute'(M:V):- new_attribute(V,M),!.
 
 new_attribute(V,M) :- var(V), !, throw(error(instantiation_error,'attribute'(M:V))).
+new_attribute(Na/Ar,Mod) :- !, functor(At,Na,Ar),new_attribute(At,Mod).
+new_attribute(Mod:ANY,_) :- !, new_attribute(ANY,Mod).
 new_attribute([],_).
 new_attribute((At1,At2),M) :- new_attribute(At1,M), new_attribute(At2,M).
 new_attribute([At1|At2],M) :- new_attribute(At1,M), new_attribute(At2,M).
-new_attribute(Na/Ar,Mod) :- functor(At,Na,Ar), (protobute(Mod:At) -> true; assertz(protobute(Mod:At))).
-new_attribute(Mod:ANY,_) :- new_attribute(ANY,Mod).
-new_attribute(At,Mod) :- (protobute(Mod:At) -> true; assertz(protobute(Mod:At))).
+new_attribute(At,Mod) :- dynamic(Mod:protobute/3),
+  (Mod:protobute(Mod,At,_) -> true; 
+   ((Mod:protobute(Mod,_,Nth)->Nth2 is Nth+1;Nth2=1),asserta(Mod:protobute(Mod,At,Nth2)))).
 
 %%    put_atts(+Var, +AccessSpec)
 %
@@ -145,7 +146,7 @@ get_atts(Var,M:Atts):- at_get(Var,M,Atts).
 
 
 at_exist(_A,_At):- current_prolog_flag(atts_declared,auto),!.
-at_exist(M,At):- \+ \+ assertion(protobute(M:At)).
+at_exist(M,At):- \+ \+ assertion(protobute(M,At,_)).
 
 at_module(Var,M):- get_attr(Var,M,Was)->assertion(is_list(Was));put_attr(Var,M,[]).
 
