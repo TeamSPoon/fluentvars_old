@@ -32,19 +32,19 @@
 
 :- module(meta_atts,[
       wno_hooks/1,w_hooks/1,
-      w_fbs/2,
+      wi_atts/2,
         wno_dmvars/1,w_dmvars/1,
   wno_debug/1,w_debug/1,
-          matts_default/0,
+          matts/0,
           testfv/0, 
           % TODO remove  above before master
       matts_override/2,
       matts_overriding/2,
       '$matts_default'/2,
-      matts_default/2,
-      matts_default/1,
-      new_hooks/2,
+      matts/2,
       matts/1,
+      new_hooks/2,
+      has_hooks/1,
       merge_fbs/3,
       any_to_fbs/2,
       fbs_to_number/2]).
@@ -166,17 +166,13 @@ X{a:A, b:B, c:C}.
 :- meta_predicate mcc(0,0).
 % TODO END remove before master
 
-:- meta_predicate wno_hooks(+).
-:- meta_predicate wno_dmvars(+).
-:- meta_predicate wno_debug(+).
-:- meta_predicate w_hooks(+).
-:- meta_predicate w_fbs(+,+).
-:- meta_predicate w_dmvars(+).
-:- meta_predicate w_debug(+).
-:- module_transparent((
-  wno_hooks/1,w_hooks/1,w_fbs/2,
-  wno_dmvars/1,w_dmvars/1,
-  wno_debug/1,w_debug/1)).
+:- meta_predicate wno_hooks(0).
+:- meta_predicate wno_dmvars(0).
+:- meta_predicate wno_debug(0).
+:- meta_predicate w_hooks(0).
+:- meta_predicate wi_atts(+,0).
+:- meta_predicate w_dmvars(0).
+:- meta_predicate w_debug(0).
  
 
 :- nodebug(matts).
@@ -220,19 +216,19 @@ collect_va_goals([],_,_) --> [].
 
 '$matts_default'(G,S):-'$matts_default'(G,S,I,I).
 
-%%	matts_default(+Get,+Set) is det.
+%%	matts(+Get,+Set) is det.
 %
 % Get/Set system wide matts modes
 % Examples:
 %
 % ==
-% ?- matts_default(_,+disable). % Disable entire system
+% ?- matts(_,+disable). % Disable entire system
 % ==
 
-matts_default(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matts_default'(_,XM)).
+matts(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matts_default'(_,XM)).
 
 
-%% matts_default(+Set) is det.
+%% matts(+Set) is det.
 %
 % Set system wide matts modes
 %
@@ -240,9 +236,9 @@ matts_default(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_ts
 % ?-listing(bits_for_hooks_default/1) to see them.
 % ==
 
-matts_default(X):-number(X),!,'$matts_default'(_,X),matts_default.
-matts_default(X):- var(X),!,'$matts_default'(X,X).
-matts_default(X):- '$matts_default'(M,M),merge_fbs(X,M,XM),must_tst('$matts_default'(_,XM)),!,matts_default,!.
+matts(X):-number(X),!,'$matts_default'(_,X),matts.
+matts(X):- var(X),!,'$matts_default'(X,X).
+matts(X):- '$matts_default'(M,M),merge_fbs(X,M,XM),must_tst('$matts_default'(_,XM)),!,matts,!.
 
 
 bits_for_hooks_default(v(
@@ -263,7 +259,7 @@ bits_for_hooks_default(v(
   bind             = 0x0200, "override(bind_const) like on_unify_keep_vars except happens in bindConst()",
   strict_equal     = 0x0400, "Allows AttVars to implement their own structurally equivalence",
   at_equals        = 0x0800, "Allows AttVars to implement their own variant-ness",
-  no_inherit     =  0x1000, "This AttVar doest not inherit from matts_default flags (otherwise they are or-ed)",
+  no_inherit     =  0x1000, "This AttVar doest not inherit from matts flags (otherwise they are or-ed)",
   copy_term      =  0x2000, "UNUSED override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
   compare        =  0x4000, "UNUSED override(compare) would allow AttVars to decide their non-standard ordering against each other",
   disabled       =  0x8000, "Treat this AttVar as a plain attributed variable (allow the system to operate recusively.. implies no_inherit) ",
@@ -293,19 +289,19 @@ bits_for_hooks_default(v(
          source_fluent=(+no_bind+peer_wakeup+override(unify)+on_unify_keep_vars+override(bind))
     )). 
 
-%% matts_default is det.
+%% matts is det.
 %
 % Print the system global modes
 %
-matts_default:-'$matts_default'(M,M),any_to_fbs(M,B),format('~N~q.~n',[matts_default(M=B)]).
+matts:-'$matts_default'(M,M),any_to_fbs(M,B),format('~N~q.~n',[matts(M=B)]).
 
 
 %% debug_hooks is det.
 %
 % Turn on extreme debugging
 %
-debug_hooks(true):-!, matts_default(+debug_hooks+debug_extreme).
-debug_hooks(_):- matts_default(-debug_hooks-debug_extreme).
+debug_hooks(true):-!, matts(+debug_hooks+debug_extreme).
+debug_hooks(_):- matts(-debug_hooks-debug_extreme).
 
 %%    matts_overriding(AttVar,BitsOut)
 %
@@ -403,17 +399,26 @@ fbs_to_number(V,VVV) :- VVV is V.
 mcc(G,CU):- !, call_cleanup((G),(CU)).
 mcc(G,CU):- G*-> CU ; (once(CU),fail).
 
+%%    wi_atts(Hooks,G)
+%
+% With inherited Hooks call Goal
 
-w_fbs(M,G):- ('$matts_default'(W,W),merge_fbs(M,W,N),'$matts_default'(W,N))->mcc(G,'$matts_default'(_,W)).
+wi_atts(M,G):- ('$matts_default'(W,W),merge_fbs(M,W,N),'$matts_default'(W,N))->mcc(G,'$matts_default'(_,W)).
 
-% Call Goal while matts Var is disabled
+%%    wo_hooks(+Var,+Goal)
+%
+% Without hooks on Var call Goal
 wo_hooks(Var,Goal):- 
   get_attr(Var,'$matts',W),T is W \/ 0x8000,
    while_goal(put_attr(Var,'$matts',T),Goal,put_attr(Var,'$matts',W)).
 
 
+%%    while_goal(Before,Goal,After)
+%
+% while executing Goal (each time) run Before first then run After
+% even if goal fails still run after
 while_goal(Before,Goal,After):-
-  set_call_cleanup(true,(Before,Goal,After),After).
+  Before,((Goal,After)*->Before;(After,!,fail)).
 
 
 wno_dmvars(G):- wno_hooks(wno_debug(G)).
@@ -442,15 +447,15 @@ a3:verify_attributes(_,_,[]).
 test(cmp_fbs_variants1):-
   put_attr(X,a1,1),put_attr(X,a2,2),put_attr(X,'$matts',1),
   put_attr(Y,'$matts',1),put_attr(Y,a1,1),put_attr(Y,'$matts',1),
-   w_fbs(+variant,X=@=Y).
+   wi_atts(+variant,X=@=Y).
 test(cmp_fbs_variants2):-
  put_attr(X,a1,1),put_attr(X,a2,2),matts_override(X,+variant),
  matts_override(Y,+variant),
-   w_fbs(+variant,X=@=Y).
+   wi_atts(+variant,X=@=Y).
 test(cmp_fbs_variants3):-
  put_attr(X,'$matts',1),
  put_attr(Y,'$matts',1),
-   w_fbs(+variant,X=@=Y).
+   wi_atts(+variant,X=@=Y).
 
 
 
