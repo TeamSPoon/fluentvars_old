@@ -129,7 +129,7 @@ AttrVar is the attributed variable encountered in the term, GoalList is an open-
 */
 
 % This type-checking predicate succeeds iff its argument is an ordinary free variable, it fails if it is an attributed variable.
-free(X):-var(X),\+attvar(X).
+eclipse:free(X):-var(X),\+attvar(X).
 
 % This type-checking predicate succeeds iff its argument is an attributed variable. For other type testing predicates an attributed variable behaves like a variable.
 meta(X):- attvar(X).
@@ -186,37 +186,43 @@ user:matts_hook(Pred,Var,Value,RetCode):-dmsg(user:matts_hook(Pred,Var,Value,Ret
 
 % TODO BEGIN remove before master
 
-:- [swi(boot/attvar)].
+:- ensure_loaded(library(logicmoo_utils)). % General debug/analyze utils
+
+:- use_listing_vars. % hacks listing/N to show us the source variable names
+
+:- [swi(boot/attvar)]. % pick up changes without re-install
+
+
 :- redefine_system_predicate('$attvar': collect_all_va_goal_lists/3).
 :- abolish('$attvar': collect_all_va_goal_lists/3).
 
-% Disables extended AttVar/Attvar wakeups and hooks durring processing.
-
+% Disables extended AttVar/Attvar wakeups and hooks durring processing (re-enabled microly per some hooks).
 '$attvar':collect_all_va_goal_lists(A,B,C):- wno_hooks(nh_collect_all_va_goal_lists(A,B,C)).
 
 nh_collect_all_va_goal_lists([]) --> [].
 nh_collect_all_va_goal_lists(wakeup(Var, Att3s, Value, Rest)) -->
         ['$attvar_assign'(Var,Value)],
-	collect_va_goals(Att3s, Var, Value),
-        collect_all_va_goal_lists(Rest).
+	nh_collect_va_goals(Att3s, Var, Value),
+        nh_collect_all_va_goal_lists(Rest).
 
-collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
+% Disables the attvar from further event processing but re-enables the rest of the system disabled above
+nh_collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
 	({ attvar(Var) }
 	-> 
-           % Disables the attvar from further event processing then re-enables the rest of the system
            ({ wo_hooks(Var,w_hooks(Module:verify_attributes(Var, Value, Goals))) },
-               collect_va_goals(Rest, Var, Assignment, Value)
+              goals_with_module(Goals, Module),
+               nh_collect_va_goals(Rest, Var, Value)
            )
         ;
         []).
         
-collect_va_goals([],_,_) --> [].
+nh_collect_va_goals([],_,_) --> [].
 
 
 % TODO END remove before master
 
 
-'$matts_default'(G,S):-'$matts_default'(G,S,I,I).
+
 
 %%	matts(+Get,+Set) is det.
 %
@@ -228,6 +234,7 @@ collect_va_goals([],_,_) --> [].
 % ==
 
 matts(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matts_default'(_,XM)).
+'$matts_default'(G,S):-'$matts_default'(G,S,I,I).
 
 
 %% matts(+Set) is det.
@@ -238,7 +245,7 @@ matts(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matt
 % ?-listing(bits_for_hooks_default/1) to see them.
 % ==
 
-matts(X):-number(X),!,'$matts_default'(_,X),matts.
+matts(X):- integer(X),!,'$matts_default'(_,X),matts.
 matts(X):- var(X),!,'$matts_default'(X,X).
 matts(X):- '$matts_default'(M,M),merge_fbs(X,M,XM),must_tst('$matts_default'(_,XM)),!,matts,!.
 
@@ -256,7 +263,7 @@ bits_for_hooks_default(v(
   on_unify_replace     = 0x0040, "UNUSED unify replace",
   no_trail             = 0x0080, "Do not bother to trail the previous value",
 
-/* schedule wakeup and can_unify for remote remote terms */
+/* Overrides */
   colon_eq         = 0x0100, "override(unify_vp) like on_unify_keep_vars except happens in unify_vp()",
   bind             = 0x0200, "override(bind_const) like on_unify_keep_vars except happens in bindConst()",
   strict_equal     = 0x0400, "Allows AttVars to implement their own structurally equivalence",
@@ -338,8 +345,6 @@ has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$matts',_)).
 
 new_hooks(Bits,AttVar):-matts_override(AttVar,Bits).
 
-:- '$matts':export('$matts':verify_attributes/3).
-:- export('$matts':verify_attributes/3).
 
 '$matts':verify_attributes(_,_,[]).
 
@@ -394,18 +399,26 @@ fbs_to_number([A|B],VVV):-!,merge_fbs(B,A,VVV).
 fbs_to_number(V,VVV) :- VVV is V.
 
 
+%%    while_goal(Before,Goal,After)
+%
+% while executing Goal (each time) run Before first then run After
+% when goal fails still run after
+while_goal(Before,Goal,After):-
+  Before,
+  ( Goal 
+  *-> 
+   ( deterministic(yes)-> After ;  (After;(Before,fail)))
+  ;
+  (After,!,fail)
+  ).
 
-:- module_transparent(w_debug/1).
-:- module_transparent(mcc/2).
+mcc(Goal,CU):- Goal*-> CU ; (once(CU),fail).
 
-mcc(G,CU):- !, call_cleanup((G),(CU)).
-mcc(G,CU):- G*-> CU ; (once(CU),fail).
-
-%%    wi_atts(Hooks,G)
+%%    wi_atts(Hooks,Goal)
 %
 % With inherited Hooks call Goal
 
-wi_atts(M,G):- ('$matts_default'(W,W),merge_fbs(M,W,N),'$matts_default'(W,N))->mcc(G,'$matts_default'(_,W)).
+wi_atts(M,Goal):- ('$matts_default'(W,W),merge_fbs(M,W,N),while_goal('$matts_default'(W,N),Goal,'$matts_default'(_,W)).
 
 %%    wo_hooks(+Var,+Goal)
 %
@@ -415,20 +428,13 @@ wo_hooks(Var,Goal):-
    while_goal(put_attr(Var,'$matts',T),Goal,put_attr(Var,'$matts',W)).
 
 
-%%    while_goal(Before,Goal,After)
-%
-% while executing Goal (each time) run Before first then run After
-% even if goal fails still run after
-while_goal(Before,Goal,After):-
-  Before,((Goal,After)*->Before;(After,!,fail)).
 
-
-wno_dmvars(G):- wno_hooks(wno_debug(G)).
-w_dmvars(G):- w_hooks(w_debug(G)).
-wno_hooks(G):-  '$matts_default'(W,W),T is W \/ 0x8000, '$matts_default'(_,T), call_cleanup(G,'$matts_default'(_,W)).
-w_hooks(G):-  '$matts_default'(W,W),T is W  /\ \ 0x8000, '$matts_default'(_,T), call_cleanup(G,'$matts_default'(_,W)).
-wno_debug(G):-  '$matts_default'(W,W), T is W /\ \ 0x100000 ,  '$matts_default'(_,T),  call_cleanup(G,'$matts_default'(_,W)).
-w_debug(G):-  '$matts_default'(W,W),T is W  \/ 0x100000 , '$matts_default'(_,T), call_cleanup(G,'$matts_default'(_,W)).
+wno_dmvars(Goal):- wno_hooks(wno_debug(Goal)).
+w_dmvars(Goal):- w_hooks(w_debug(Goal)).
+wno_hooks(Goal):-  '$matts_default'(W,W),T is W \/ 0x8000, while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
+w_hooks(Goal):-  '$matts_default'(W,W),T is W  /\ \ 0x8000, while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
+wno_debug(Goal):-  '$matts_default'(W,W), T is W /\ \ 0x100000, while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
+w_debug(Goal):-  '$matts_default'(W,W),T is W  \/ 0x100000 , while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
 
 testfv:-forall(test(T),dmsg(passed(T))).
 
