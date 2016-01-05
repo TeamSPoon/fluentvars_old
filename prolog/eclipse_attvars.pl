@@ -31,22 +31,26 @@
 */
 
 :- module(meta_atts,[
-      wno_hooks/1,w_hooks/1,
+      matts/0,
+      testfv/0, 
+      w_debug/1,
+      w_dmvars/1,
+      w_hooks/1,
       wi_atts/2,
-        wno_dmvars/1,w_dmvars/1,
-  wno_debug/1,w_debug/1,
-          matts/0,
-          testfv/0, 
-          % TODO remove  above before master
+      wo_hooks/2,
+      wno_debug/1,
+      wno_dmvars/1,
+      wno_hooks/1,
+      % TODO remove  above before master
+      '$matts_default'/2,
+      any_to_fbs/2,
+      has_hooks/1,
+      matts/1,
+      matts/2,
       matts_override/2,
       matts_overriding/2,
-      '$matts_default'/2,
-      matts/2,
-      matts/1,
-      new_hooks/2,
-      has_hooks/1,
       merge_fbs/3,
-      any_to_fbs/2,
+      new_hooks/2,
       fbs_to_number/2]).
 
 
@@ -138,8 +142,6 @@ add_attribute(Var, Attr):- put_atts(Var, Attr).
 
 % TODO  add_attribute(?Var, Attribute, AttrName):- put_atts(Var, Attr).
 % add_attribute(Var, Attr).
-
-
 '$matts':copy_handler(AttrVar, Copy):- duplicate_term(AttrVar,Copy).
 
 :- meta_predicate(get_attribute(+,:)).
@@ -262,7 +264,7 @@ bits_for_hooks_default(v(
   no_inherit     =  0x1000, "This AttVar doest not inherit from matts flags (otherwise they are or-ed)",
   copy_term      =  0x2000, "UNUSED override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
   compare        =  0x4000, "UNUSED override(compare) would allow AttVars to decide their non-standard ordering against each other",
-  disabled       =  0x8000, "Treat this AttVar as a plain attributed variable (allow the system to operate recusively.. implies no_inherit) ",
+  disabled       =  0x8000, "Treat this AttVar as a non attributed variable (allow the system to operate recusively.. implies no_inherit) ",
   check_vmi      = 0x010000, "LD->slow_unify might need tp be true for us to work (mostly for testing)",
   vmi_ok         = 0x030000, "LD->slow_unify is/was not needed",
   save_wakeup    = 0x040000, "saveWakeup before scheduling",
