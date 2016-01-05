@@ -33,6 +33,7 @@
 :- module(meta_atts,[
       matts/0,
       testfv/0, 
+      test/1,
       w_debug/1,
       w_dmvars/1,
       w_hooks/1,
@@ -50,7 +51,7 @@
       matts_override/2,
       matts_overriding/2,
       merge_fbs/3,
-      new_hooks/2,
+      new_matts/2,
       fbs_to_number/2]).
 
 
@@ -142,7 +143,7 @@ add_attribute(Var, Attr):- put_atts(Var, Attr).
 
 % TODO  add_attribute(?Var, Attribute, AttrName):- put_atts(Var, Attr).
 % add_attribute(Var, Attr).
-'$matts':copy_handler(AttrVar, Copy):- duplicate_term(AttrVar,Copy).
+'$atts':copy_handler(AttrVar, Copy):- duplicate_term(AttrVar,Copy).
 
 :- meta_predicate(get_attribute(+,:)).
 get_attribute(Var, Attr):- get_atts(Var, Attr).
@@ -179,10 +180,10 @@ X{a:A, b:B, c:C}.
 
 :- nodebug(matts).
 
-:- multifile(user:matts_hook/4).
-:- dynamic(user:matts_hook/4).
-user:matts_hook(Pred,Var,Value,RetCode):-trace,dmsg(user:matts_hook(Pred,Var,Value,RetCode)),fail.
-
+:- multifile('$atts':matts_hook/4).
+:- dynamic('$atts':matts_hook/4).
+'$atts':matts_hook(Pred,Var,Value,RetCode):-dmsg(user:matts_hook(Pred,Var,Value,RetCode)),fail.
+'$atts':matts_hook('=@=',A,B,1):-get_attr(A,value,AA),w_hooks('=@='(AA,B)).
 
 % TODO BEGIN remove before master
 
@@ -207,7 +208,7 @@ nh_collect_all_va_goal_lists(wakeup(Var, Att3s, Value, Rest)) -->
 
 % Disables the attvar from further event processing but re-enables the rest of the system disabled above
 nh_collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
-	({ attvar(Var) }
+	({ attvar(Var),Var\==Value }
 	-> 
            ({ wo_hooks(Var,w_hooks(Module:verify_attributes(Var, Value, Goals))) },
               '$attvar':goals_with_module(Goals, Module),
@@ -252,7 +253,7 @@ matts(X):- '$matts_default'(M,M),merge_fbs(X,M,XM),must_tst('$matts_default'(_,X
 
 bits_for_hooks_default(v(
 
-/* '$matts' = 18 AttVarBitS: these bits in an prolog accessable  get_attr/3,putt_attr/3 need it fit in valInt()*/
+/* '$atts' = 18 AttVarBitS: these bits in an prolog accessable  get_attr/3,putt_attr/3 need it fit in valInt()*/
   no_bind              = 0x0001, "C should let wakeup/1 do binding",
   no_wakeup            = 0x0002, "C should skip scheduling a $wakeup/1 ",
   mid_unify            = 0x0004, "do_unify() has called unify",
@@ -274,8 +275,8 @@ bits_for_hooks_default(v(
   disabled       =  0x8000, "Treat this AttVar as a non attributed variable (allow the system to operate recusively.. implies no_inherit) ",
   check_vmi      = 0x010000, "LD->slow_unify might need tp be true for us to work (mostly for testing)",
   vmi_ok         = 0x030000, "LD->slow_unify is/was not needed",
-  save_wakeup    = 0x040000, "saveWakeup before scheduling",
-  immediate      = 0x080000, "run foreignWakeup immediatly after schedule",
+  return_wake    = 0x040000, "saveWakeup before scheduling",
+  nonimmediate   = 0x080000, "run foreignWakeup immediatly after schedule",
   spy            = 0x100000, "spy on matts",
   debug          = 0x100000, "spy on matts",
 
@@ -317,7 +318,7 @@ debug_hooks(_):- matts(-debug_hooks-debug_extreme).
 % Get matts properties
 %
 
-matts_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$matts',Modes)->any_to_fbs(Modes,BitsOut);BitsOut=0).
+matts_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$atts',Modes)->any_to_fbs(Modes,BitsOut);BitsOut=0).
 
 
 %%    matts_override(AttVar,BitsOut)
@@ -328,32 +329,33 @@ matts_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$matts',Modes)->an
 matts_override(AttVar,Modes):-
  wno_hooks((var(AttVar),
   ((
-   get_attr(AttVar,'$matts',Was)->
-       (merge_fbs(Modes,Was,Change),put_attr(AttVar,'$matts',Change)); 
-   (fbs_to_number(Modes,Number),put_attr(AttVar,'$matts',Number)))))),!.
+   get_attr(AttVar,'$atts',Was)->
+       (merge_fbs(Modes,Was,Change),put_attr(AttVar,'$atts',Change)); 
+   (fbs_to_number(Modes,Number),put_attr(AttVar,'$atts',Number)))))),!.
 
 
 %%    matts(+AttVar)
 %
 % Checks to see if a term has matts
 
-has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$matts',_)).
+has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$atts',_)).
 
-%%    new_hooks(+Bits,-AttVar) is det.
+%%    new_matts(+Bits,-AttVar) is det.
 %
 % Create new matts with a given set of Overrides
 
-new_hooks(Bits,AttVar):-matts_override(AttVar,Bits).
+new_matts(Bits,AttVar):-matts_override(AttVar,Bits).
 
 
-'$matts':verify_attributes(_,_,[]).
+'$atts':verify_attributes(_,_,[]).
 
 contains_fbs(AttVar,Bit):- any_to_fbs(AttVar,Bits),!,member(Bit,Bits).
 
-any_to_fbs(BitsIn,BitsOut):-  
- fbs_to_number(BitsIn,Mode),
+% any_to_fbs(Var,BitsOut):- attvar(Var), get_attr(Var,'$mattr',BitsIn),!,any_to_fbs(BitsIn,BitsOut).
+any_to_fbs(BitsIn,BitsOut):-
+ must((fbs_to_number(BitsIn,Mode),number(Mode))),
    Bits=[Mode],bits_for_hooks_default(MASKS),
-   ignore((arg(_,MASKS,(N=V)),nonvar(V),fbs_to_number(V,VV), VV is VV /\ Mode , matts_vars:nb_extend_list(Bits,N),fail)),!,
+   ignore((arg(_,MASKS,(N=V)),nonvar(V),nonvar(N),fbs_to_number(V,VV), VV is VV /\ Mode , matts_vars:nb_extend_list(Bits,N),fail)),!,
    BitsOut = Bits.
 
 
@@ -380,7 +382,7 @@ merge_fbs(A,C,VVV):-fbs_to_number(override(A),VV),!,must_tst(merge_fbs(VV,C,VVV)
 
 fbs_to_number(N,O):-number(N),!,N=O.
 fbs_to_number(V,VVV):-attvar(V),!,matts_overriding(V,VV),!,fbs_to_number(VV,VVV).
-fbs_to_number(V,O):-var(V),!,V=O.
+fbs_to_number(V,O):-var(V),!,0=O.
 fbs_to_number([],0).
 fbs_to_number(B << A,VVV):-!, fbs_to_number(B,VV), VVV is (VV << A).
 fbs_to_number(B+A,VVV):- merge_fbs(+(A),B,VVV),!.
@@ -424,8 +426,8 @@ wi_atts(M,Goal):- '$matts_default'(W,W),merge_fbs(M,W,N),while_goal('$matts_defa
 %
 % Without hooks on Var call Goal
 wo_hooks(Var,Goal):-
-  get_attr(Var,'$matts',W),T is W \/ 0x8000,!,
-   while_goal(put_attr(Var,'$matts',T),Goal,put_attr(Var,'$matts',W)).
+  get_attr(Var,'$atts',W),T is W \/ 0x8000,!,
+   while_goal(put_attr(Var,'$atts',T),Goal,put_attr(Var,'$atts',W)).
 wo_hooks(_Var,Goal):-Goal.
 
 
@@ -452,17 +454,22 @@ a1:verify_attributes(_,_,[]).
 a2:verify_attributes(_,_,[]).
 a3:verify_attributes(_,_,[]).
 
+test(cmp_fbs_variants0):- put_attr(X,'$atts',4),put_attr(Y,'$atts',4),wi_atts(+variant,X=@=Y).
+test(cmp_fbs_variants0a):- put_attr(X,a1,1),put_attr(X,'$atts',4),put_attr(Y,'$atts',4),wi_atts(+variant,X=@=Y).
+
 test(cmp_fbs_variants1):-
-  put_attr(X,a1,1),put_attr(X,a2,2),put_attr(X,'$matts',1),
-  put_attr(Y,'$matts',1),put_attr(Y,a1,1),put_attr(Y,'$matts',1),
+  put_attr(X,a1,1),put_attr(X,a2,2),put_attr(X,'$atts',1),
+  put_attr(Y,'$atts',1),put_attr(Y,a1,1),put_attr(Y,'$atts',1),
    wi_atts(+variant,X=@=Y).
+
 test(cmp_fbs_variants2):-
- put_attr(X,a1,1),put_attr(X,a2,2),matts_override(X,+variant),
- matts_override(Y,+variant),
-   wi_atts(+variant,X=@=Y).
+ put_attr(X,a1,1),put_attr(X,a2,2),
+ matts_override(X,+variant),
+ matts_override(Y,+variant),X=@=Y.
+
 test(cmp_fbs_variants3):-
- put_attr(X,'$matts',1),
- put_attr(Y,'$matts',1),
+ put_attr(X,'$atts',1),
+ put_attr(Y,'$atts',1),
    wi_atts(+variant,X=@=Y).
 
 

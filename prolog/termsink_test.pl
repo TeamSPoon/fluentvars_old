@@ -37,16 +37,16 @@
    Some experiments ongoing
 
    With any of the above set the system still operates as normal
-              until the user invokes  '$fluent_default'/2 to 
+              until the user invokes  '$matts_default'/2 to 
 
    None of these option being enabled will cost more than 
-              if( (LD->attrvar.fluent_default & SOME_OPTION) != 0) ...
+              if( (LD->attrvar.matts_default & SOME_OPTION) != 0) ...
   
     
 */
 
 :- meta_predicate must_ts_det(0).
-:- meta_predicate fluent_call(1,0).
+:- meta_predicate matts_call(1,0).
 
 
 :- user:use_module(library(fluent_vars)).
@@ -59,7 +59,7 @@
 :- debug(attvars).
 :- meta_predicate maplist_local(+,+).
 :- module_transparent((maplist_local/2)).
-:- meta_predicate do_test_type(1),must_ts(0),test(?).
+:- meta_predicate do_test_type(1),must_ts(0),tst(?).
 
 %% depth_of_var(+Var,-FrameCount) is det.
 %
@@ -104,7 +104,7 @@
 %  ==
 anything_once(Var):- nonvar(Var) ->true; (get_attr(Var,nr,_)->true;put_attr(Var,nr,old_vals([]))).
 
-nr:attr_unify_hook(AttValue,VarValue):- AttValue=old_vals(Waz), \+ memberchk_same_q(VarValue,Waz),nb_setarg(1,AttValue,[VarValue|Waz]).
+nr:post_unify_hook(AttValue,VarValue):- AttValue=old_vals(Waz), \+ memberchk_same_q(VarValue,Waz),nb_setarg(1,AttValue,[VarValue|Waz]).
 
 
 %% termfilter(-X) is det.
@@ -129,7 +129,7 @@ termfilter(X):-mvar_set(X,-vmAssign+remainVar).
 % ==
 % /* if the new value is the same as the old value accept the unification*/
 % plvar(X):- termsource(X),put_attr(X,plvar,binding(X,_)).
-% plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
+% plvar:post_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
 % ==
 %
 % ==
@@ -142,10 +142,10 @@ termfilter(X):-mvar_set(X,-vmAssign+remainVar).
 %
 /* if the new value is the same as the old value accept the unification*/
 %plvar(X):- mvar_set(X,+remainVar),put_attr(X,plvar,binding(X,_)).
-%plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
+%plvar:post_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
 
 plvar(X):- put_attr(X,plvar,binding(X,_)).
-plvar:verify_attributes(Var,Value,[]):- trace,
+plvar:verify_attributes(Var,Value,[]):- 
       get_attr(Var,plvar,binding(Var,Prev)),
       Value=Prev,
       get_attr(Var,plvar,binding(Var,Value)).
@@ -175,17 +175,17 @@ plvar:verify_attributes(Var,Value,[]):- trace,
 
 subsumer_var(X):- termsource(X),init_accumulate(X,pattern,term_subsumer).
 
-fluent_call(FluentFactory,Goal):-
+matts_call(FluentFactory,Goal):-
    term_variables(Goal,Vs),
    maplist(FluentFactory,Vs),
    Goal.
 
 
-test:verify_attributes(X, Value, [format('~N~q, ~n',[goal_for(Name)])]) :- sformat(Name,'~w',X), get_attr(X, test, Attr),format('~Nverifying: ~w = ~w (attr: ~w),~n', [X,Value,Attr]).
+tst:verify_attributes(X, Value, [format('~N~q, ~n',[goal_for(Name)])]) :- sformat(Name,'~w',X), get_attr(X, tst, Attr),format('~Nverifying: ~w = ~w (attr: ~w),~n', [X,Value,Attr]).
 
-test:attr_unify_hook(Attr,Value):-format('~N~q, ~n',[test:attr_unify_hook(Attr,Value)]).
+% tst:post_unify_hook(Attr,Value):-format('~N~q, ~n',[tst:post_unify_hook(Attr,Value)]).
 
-:- discontiguous(test/1).
+:- discontiguous(tst/1).
 
 
 %% counter_var(-X) is det.
@@ -212,7 +212,7 @@ counter_var(X):- termsource(X),init_accumulate(X,counter_var,plus).
 %
 % nb_var/1 code above doesnt call nb_var/2 (since termsource/1 needs called before call we call format/3 .. promotes a _L666 varable to _G666 )
 nb_var(V):- termsource(V), format(atom(N),'~q',[V]),nb_linkval(N,V),put_attr(V,nb_var,N),nb_linkval(N,V).
-nb_var:attr_unify_hook(N,Value):-
+nb_var:post_unify_hook(N,Value):-
        nb_getval(N,Prev),
        ( % This is how we produce a binding for +termsource "iterator"
           (var(Value),nonvar(Prev)) ->  Value=Prev;
@@ -268,14 +268,14 @@ q(A,B):-ab(A,B),xy(A,B).
 % Create or alter a Prolog variable to have overrideed unification
 %
 % Done with these steps:
-% 1) +fluent_sink = Allow to remain a variable after binding with a nonvar
-% 2) +fluent_source = Declares the variable to be a value producing with on_unify_keep_vars
+% 1) +matts_sink = Allow to remain a variable after binding with a nonvar
+% 2) +matts_source = Declares the variable to be a value producing with on_unify_keep_vars
 % 3) Set the unifyp attribute to the Pred.
-set_unifyp(Pred,Fluent):- wno_dmvars((trace,fluent_source(Fluent),put_attr(Fluent,unifyp,binding(Pred,Fluent,_Uknown)))).
+set_unifyp(Pred,Fluent):- wno_dmvars((trace,matts_source(Fluent),put_attr(Fluent,unifyp,binding(Pred,Fluent,_Uknown)))).
 
 % Our implimentation of a unifyp variable
-unifyp:attr_unify_hook(binding(Pred,Fluent,Prev),Value):-
-        % This is how we produce a binding for +fluent_source "on_unify_keep_vars"
+unifyp:post_unify_hook(binding(Pred,Fluent,Prev),Value):-
+        % This is how we produce a binding for +matts_source "on_unify_keep_vars"
           (var(Value),nonvar(Prev)) ->  Value=Prev;
          % same binding (effectively)
              Value==Prev->true;
@@ -288,11 +288,11 @@ unifyp:attr_unify_hook(binding(Pred,Fluent,Prev),Value):-
 
 % label_sources
 
-lv:- fluent_call(set_unifyp(equals),q(A,B)),label_sources(A,B),dmsg(q(A,B)).
+lv:- matts_call(set_unifyp(equals),q(A,B)),label_sources(A,B),dmsg(q(A,B)).
 
 
 
-:- module_transparent(test:verify_attributes/3).
+:- module_transparent(tst:verify_attributes/3).
 
 
 
@@ -301,17 +301,17 @@ lv:- fluent_call(set_unifyp(equals),q(A,B)),label_sources(A,B),dmsg(q(A,B)).
 
 
 ?- 
- put_attr(X, test, a), X = a.
+ put_attr(X, tst, a), X = a.
 verifying: _G389386 = a;  (attr: a)
 X = a.
 
 
-?-  put_attr(X,test, vars(Y)), put_attr(Y,test, vars(X)), [X,Y] = [x,y(X)].
+?-  put_attr(X,tst, vars(Y)), put_attr(Y,tst, vars(X)), [X,Y] = [x,y(X)].
 verifying: _G389483 = x;  (attr: vars(_G389490))
 verifying: _G389490 = y(x);  (attr: vars(x))
 
 
-?- VARS = vars([X,Y,Z]), put_attr(X,test, VARS), put_attr(Y,test,VARS), put_attr(Z,test, VARS), [X,Y,Z]=[0,1,2].
+?- VARS = vars([X,Y,Z]), put_attr(X,tst, VARS), put_attr(Y,tst,VARS), put_attr(Z,tst, VARS), [X,Y,Z]=[0,1,2].
 verifying: _G389631 = 0;  (attr: vars([_G389631,_G389638,_G389645]))
 verifying: _G389638 = 1;  (attr: vars([0,_G389638,_G389645]))
 verifying: _G389645 = 2;  (attr: vars([0,1,_G389645]))
@@ -339,7 +339,7 @@ t2:- must_ts(rtrace( (freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Foo
 
 /* This tells C, even when asked, to not do bindings (yet) 
                       This is to allow the variables to interact with the standard prolog terms, clause databases and foriegn objects.. for example:
-                    test:put_attr(Fluent,+no_bind),jpl_to_string("hi",Fluent),X="HI",X=['h','i'],
+                    tst:put_attr(Fluent,+no_bind),jpl_to_string("hi",Fluent),X="HI",X=['h','i'],
                        Even if verify_attributes succeeds, still do not bind to the value.
                        verify_attributes should in this case 
                        use continuation goals to update some internal state to decides
@@ -366,7 +366,7 @@ t2:- must_ts(rtrace( (freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Foo
 
 
 
-
+must_ts(G):- !, must(G).
 must_ts(G):- G*-> true; throw(must_ts_fail(G)).
 must_ts_det(G):- G,deterministic(Y),(Y==true->true;throw(must_ts_fail(G))).
 
@@ -385,7 +385,7 @@ do_test_type(Type):-
       fail)),
       writeln(value=X))),var_info(X).
 
-tv123(B):-fluent_override(X,B),t123(X).
+tv123(B):-matts_override(X,B),t123(X).
 t123(X):- print_var(xbefore=X),L=link_term(X,Y,Z),dmsg(before=L),
   ignore((
    X=1,X=1,ignore(show_call(X=2)),w_debug(Y=X),w_debug(X=Z),print_var(x=X),
@@ -401,22 +401,13 @@ print_var(V):-wno_dmvars(show_var(V)).
 show_var(E):- wno_dmvars((nonvar(E),(N=V)=E, show_var(N,V))),!.
 show_var(V):- wno_dmvars((show_var(var_was,V))).
 
-show_var(N,V):- wno_dmvars(((((\+ attvar(V)) -> dmsg(N=V); (must_ts(('$mvar_get_sinkmode'(V,Key,C),get_attrs(V,Attrs),any_to_fbs(C,Bits))),dmsg(N=(V={Key,Attrs,C,Bits}))))))).
+show_var(N,V):- wno_dmvars(((((\+ attvar(V)) -> dmsg(N=V); (must_ts((get_attrs(V,Attrs),any_to_fbs(V,Bits))),dmsg(N=(V={Attrs,Bits}))))))).
 
 
-'$source':attr_unify_hook(X,Y):- ignore((debug(termsinks,'~N~q.~n',['$source':attr_unify_hook(X,Y)]))),fail.
-'$source':attr_unify_hook(_,Y):- member(Y,[default1,default2,default3])*->true;true.
-
-contains_bit(Var,Bit):- var(Bit),'$mvar_get_sinkmode'(Var,_,M),any_to_fbs(M,Bits),!,member(Bit,Bits).
-contains_bit(Var,Bit):-'$mvar_get_sinkmode'(Var,_,M),fbs_to_number(Bit,N),!,N is N /\ M.
+'$source':post_unify_hook(X,Y):- ignore((debug(termsinks,'~N~q.~n',['$source':post_unify_hook(X,Y)]))),fail.
+'$source':post_unify_hook(_,Y):- member(Y,[default1,default2,default3])*->true;true.
 
 
-'$ident':verify_attributes(Var,Value,Goals):- debug(attvars,'~N~q.~n',['$ident':verify_attributes(Var,Value,Goals)]).
-
-'$ident':attr_unify_hook(Var,Value):- var(Var),contains_bit(Var,iteratorVar),var(Value),!,member(Value,[default1,default2,default3]).
-'$ident':attr_unify_hook(Var,Value):- 
-  wno_dmvars((((ignore((var(Var),get_attrs(Var,Attribs), 
-   debug(termsinks,'~N~q.~n',['$ident':attr_unify_hook({var=Var,attribs=Attribs},{value=Value})]))))))).
 
 % https://github.com/Muffo/aiswi/blob/master/sciff/restrictions.pl
 
@@ -426,40 +417,44 @@ contains_bit(Var,Bit):-'$mvar_get_sinkmode'(Var,_,M),fbs_to_number(Bit,N),!,N is
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
-override_all(Fluent):- fluent_override(Fluent,+override_all),override_all.
+override_all(Fluent):- matts_override(Fluent,+override_all),override_all.
 
 %% override_all(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
-eagerly(Fluent):- fluent_override(Fluent,+eagerly),eagerly.
+eagerly(Fluent):- matts_override(Fluent,+eagerly),eagerly.
 
 %% override_all(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
-no_bind(Fluent):- fluent_override(Fluent,+no_bind).
+no_bind(Fluent):- matts_override(Fluent,+no_bind).
 
 
 %% override_all() is det.
 %
 % Aggressively make fluents unify with non fluents (instead of the other way arround)
 %
-eagerly:- fluent_default(+eagerly+check_vmi).
+eagerly:- matts_default(+eagerly+check_vmi).
 noeagerly:- override_none.
-override_all:- fluent_default(+override_all+check_vmi).
-pass_ref:- fluent_default(+on_unify_replace).
-override_none:-  fluent_default(-override_all-eagerly).
+override_all:- matts_default(+override_all+check_vmi).
+pass_ref:- matts_default(+on_unify_replace).
+override_none:-  matts_default(-override_all-eagerly).
 
 test123:verify_attributes(Fluent,_Value,[]):- member(Fluent,[default1,default2,default3]).
-% test123:attr_unify_hook(_,Value):- member(Value,[default1,default2,default3]).
+% test123:post_unify_hook(_,Value):- member(Value,[default1,default2,default3]).
 
 
-'$ident':verify_attributes(Fluent,Value,[]):- var(Fluent),contains_bit(Fluent,on_unify_keep_vars),var(Value),!,member(Value,[default1,default2,default3]).
+'$ident':verify_attributes(Var,Value,Goals):- debug(attvars,'~N~q.~n',['$ident':verify_attributes(Var,Value,Goals)]),fail.
+'$ident':verify_attributes(Fluent,Value,[]):- var(Fluent),contains_fbs(Fluent,on_unify_keep_vars),var(Value),!,member(Value,[default1,default2,default3]).
 
-'$ident':attr_unify_hook(Fluent,Value):- 
-  wno_dmvars((((ignore((var(Fluent),get_attrs(Fluent,Attribs), 
-   debug(fluents,'~N~q.~n',['$ident':attr_unify_hook({var=Fluent,attribs=Attribs},{value=Value})]))))))).
+
+
+'$ident':post_unify_hook(Var,Value):- 
+  wno_dmvars((((ignore((var(Var),get_attrs(Var,Attribs), 
+   debug(termsinks,'~N~q.~n',['$ident':post_unify_hook({var=Var,attribs=Attribs},{value=Value})]))))))).
+'$ident':post_unify_hook(Var,Value):- var(Var),contains_fbs(Var,iteratorVar),var(Value),!,member(Value,[default1,default2,default3]).
 
 :-  debug(fluents).
 
@@ -510,7 +505,7 @@ mv:attr_unify_hook(AttValue,FluentValue):- AttValue=old_vals(Waz),nb_setarg(1,At
 
 memory_var(Fluent):- nonvar(Fluent) ->true; (get_attr(Fluent,mv,_)->true;put_attr(Fluent,mv,old_vals([]))).
 
-test(memory_var):- memory_var(X),  ignore((member(X,[1,2,3,3,3,1,2,3]),writeln(memory_var=X),fail)),get_attrs(X,Attrs),writeln(get_attrs=Attrs).
+tst(memory_var):- memory_var(X),  ignore((member(X,[1,2,3,3,3,1,2,3]),writeln(memory_var=X),fail)),get_attrs(X,Attrs),writeln(get_attrs=Attrs).
 
 
 %% memory_fluent(+Fluent) is det.
@@ -526,8 +521,8 @@ test(memory_var):- memory_var(X),  ignore((member(X,[1,2,3,3,3,1,2,3]),writeln(m
 %  X = 3;
 %  No.
 %  ==
-% memory_fluent(Fluent):-fluent_override(Sink,[]), put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
-memory_fluent(Fluent):-fluent_override(Fluent,[]),put_attr(Fluent,'_',Fluent),put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
+% memory_fluent(Fluent):-matts_override(Sink,[]), put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
+memory_fluent(Fluent):-matts_override(Fluent,[]),put_attr(Fluent,'_',Fluent),put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
 
 
 
@@ -581,7 +576,7 @@ memory_fluent(Fluent):-fluent_override(Fluent,[]),put_attr(Fluent,'_',Fluent),pu
 
 */
 
-v1(X,V) :- fluent_override(V,X),show_var(V).
+v1(X,V) :- matts_override(V,X),show_var(V).
 
 
 
@@ -596,7 +591,7 @@ v1(X,V) :- fluent_override(V,X),show_var(V).
  forall(source_file(M:H,S),
  ignore((functor(H,F,A),M\=vn,
    \+ predicate_property(M:H,imported_from(_)),
-   \+ arg(_,[attr_unify_hook/2,'$pldoc'/4,'$mode'/2,attr_portray_hook/2,attribute_goals/3],F/A),
+   \+ arg(_,[post_unify_hook/2,'$pldoc'/4,'$mode'/2,attr_portray_hook/2,attribute_goals/3],F/A),
    \+ atom_concat('_',_,F),
    ignore(((\+ atom_concat('$',_,F),export(F/A)))),
    ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A)))))).
