@@ -401,13 +401,13 @@ fbs_to_number(V,VVV) :- VVV is V.
 
 %%    while_goal(Before,Goal,After)
 %
-% while executing Goal (each time) run Before first then run After
-% when goal fails still run after
+% while executing Goal (and each time) run:  once(Before),Goal,After
+% But even when goal fails still run After
 while_goal(Before,Goal,After):-
-  Before,
+  Before,!,
   ( Goal 
   *-> 
-   ( deterministic(yes)-> After ;  (After;(Before,fail)))
+   ( deterministic(yes)-> After ;  (After;(once(Before),fail)))
   ;
   (After,!,fail)
   ).
