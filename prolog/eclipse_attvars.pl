@@ -45,12 +45,12 @@ handler is invoked by the delayed_goals_number/2 predicate. The handler call pat
 delayed_goals_number_handler(?AttrVar, -Number)
 AttrVar is the attributed variable encountered in the term, Number is the number of delayed goals occurring in this attribute. Its main purpose is for the first-fail selection predicates, i.e., it should return the number of constraints imposed on the variable.
 
-get_bounds:  SO FAR UNNEDED
+get_bounds:  OUT OF SCOPE (Should be done in CLP)
 This handler is used by the predicate get_var_bounds/3 to retrieve information about the lower and upper bound of a numeric variable. The handler should therefore only be defined if the attribute contains that kind of information. The handler call pattern is
 get_bounds_handler(?AttrVar, -Lwb, -Upb)
 The handler is only invoked if the variable has the corresponding (non-empty) attribute. The handler should bind Lwb and Upb to numbers (any numeric type) reflecting the attribute’s information about lower and upper bound of the variable, respectively. If different attributes return different bounds information, get_var_bounds/3 will return the intersection of these bounds. This can be empty (Lwb > Upb).
 
-set_bounds:  SO FAR UNNEDED
+set_bounds:  OUT OF SCOPE (Should be done in CLP)
 This handler is used by the predicate set_var_bounds/3 to distribute information about the lower and upper bound of a numeric variable to all its existing attributes. The handler should therefore only be defined if the attribute can incorporate this kind of information. The handler call pattern is
 set_bounds_handler(?AttrVar, +Lwb, +Upb)
 The handler is only invoked if the variable has the corresponding (non-empty) attribute. Lwb and Upb are the numbers that were passed to set_var_bounds/3, and the handler is expected to update its own bounds representation accordingly.
@@ -99,7 +99,7 @@ get_attribute(X{Name:Attribute},A).
 % The first argument is the attributed variable to be unfied, the second argument is the term it is going to be unified with. 
 % This handler is provided only for compatibility with SICStus Prolog and its use is not recommended, 
 % because it is less efficient than the unify handler and because its semantics is somewhat unclear, there may be cases where changes inside this handler may have unexpected effects.
-pre_unify_handler(AttrVar, Term)
+% pre_unify_handler(AttrVar, Term).
 
 /*
 
