@@ -52,10 +52,12 @@
       wno_dmvars/1,
       wno_hooks/1,
       % TODO remove  above before master
-      '$matts_default'/2,
+      
       any_to_fbs/2,
       has_hooks/1,
       matts/1,
+      put_atts/2,
+      get_atts/2,
       matts/2,
       matts_override/2,
       matts_overriding/2,
@@ -72,6 +74,8 @@
 :- meta_predicate('meta_attribute'(+,:)).
 :- meta_predicate(get_pairs(+,:)).
 :- meta_predicate(put_pairs(+,:)).
+:- meta_predicate(get_atts(+,:)).
+:- meta_predicate(put_atts(+,:)).
 :- meta_predicate(dict_attvar(:)).
 :- meta_predicate(dict_attvar(:,-)).
 :- meta_predicate wi_atts(+,0).
@@ -83,10 +87,10 @@
 :- meta_predicate w_debug(0).
 :- meta_predicate wno_debug(0).
 
-\
+
 % TODO BEGIN remove before master
 
-:- meta_predicate must_tst_det(0).
+:- meta_predicate tst_det(0).
 :- meta_predicate must_tst(0).
 :- meta_predicate mcc(0,0).
 
@@ -94,33 +98,7 @@
 
 :- use_listing_vars. % hacks listing/N to show us the source variable names
 
-:- [swi(boot/attvar)]. % pick up changes without re-install
-
-
-:- redefine_system_predicate('$attvar': collect_all_va_goal_lists/3).
-:- abolish('$attvar': collect_all_va_goal_lists/3).
-
-% Disables extended AttVar/Attvar wakeups and hooks durring processing (re-enabled microly per some hooks).
-'$attvar':collect_all_va_goal_lists(A,B,C):- wno_hooks(nh_collect_all_va_goal_lists(A,B,C)).
-
-nh_collect_all_va_goal_lists([]) --> [].
-nh_collect_all_va_goal_lists(wakeup(Var, Att3s, Value, Rest)) -->
-        ['$attvar_assign'(Var,Value)],
-	nh_collect_va_goals(Att3s, Var, Value),
-        nh_collect_all_va_goal_lists(Rest).
-
-% Disables the attvar from further event processing but re-enables the rest of the system disabled above
-nh_collect_va_goals(att(Module, _AttVal, Rest), Var, Value) -->
-	({ attvar(Var),Var\==Value }
-	-> 
-           ({ wo_hooks(Var,w_hooks(Module:verify_attributes(Var, Value, Goals))) },
-              '$attvar':goals_with_module(Goals, Module),
-               nh_collect_va_goals(Rest, Var, Value)
-           )
-        ;
-        []).
-        
-nh_collect_va_goals([],_,_) --> [].
+% :- [swi(boot/attvar)]. % pick up changes without re-install
 
 
 
@@ -298,7 +276,9 @@ new_meta_attribute(Base,At,Mod) :- dynamic(Mod:protobute/3),
 % put_attr(V, m1, [b(x1, y1)]),
 % put_attr(V, m2, [b(x2, y2)]) .
 
-put_pairs(Var,M:Atts):- pair_put(Var,M,Atts).
+put_pairs(Var,M:Atts):- pair_put(Var,M,Atts),!.
+put_atts(Var,M:Atts):- atom(M),!,pair_put(Var,M,Atts),!.
+put_atts(Var,Prop:Atts):- strip_module(Prop,M,P),pair_put(Var,M,P:Atts),!.
 
 
 %%    get_pairs(+Var, ?AccessSpec) 
@@ -331,7 +311,8 @@ put_pairs(Var,M:Atts):- pair_put(Var,M,Atts).
 % ==
 % TODO/QUESTION  user:get_pairs(Var,Atts) ->  ??? only attributes in 'user' or all attributes??? Attr=[m1:...]
 
-get_pairs(Var,M:Atts):- pair_get(Var,M,Atts).
+get_pairs(Var,M:Atts):- pair_get(Var,M,Atts),!.
+get_atts(Var,M:Atts):- pair_put(Var,M,Atts),!.
 
 
 pair_exist(_A,_At):- current_prolog_flag(atts_declared,auto),!.
@@ -341,6 +322,29 @@ pair_exist(M,At):- \+ \+ (M:dynamic(protobute/3),assertion(M:protobute(M,At,_)))
 pair_module(Var,M):- get_attr(Var,M,Was)->assertion(is_list(Was));put_attr(Var,M,[]).
 
 pair_tmpl(At,Tmpl):-functor(At,F,A),functor(Tmpl,F,A).
+
+to_pi(unify,=(_,_)).
+to_pi(FA,PI):- compound(FA),compound_name_arity(FA,F,0),to_pi(F,PI),!.
+to_pi(F/A,PI):- atom(F),integer(A),A>0,compound_name_arity(PI,F,A).
+to_pi(F,PI):- atom(F),current_predicate( F /A),!,functor(PI,F,A).
+to_pi(PI,PI).
+
+system:'$undo_unify'(Var,Value):-dmsg(system:'$undo_unify'(Var,Value)).
+
+%  av(X),metaterm_override(X, = /2 : unify/2),'$attvar_overriding'(X,l(_,_),Y).
+
+system:metaterm_override(X,BA):- is_list(BA),!,maplist(system:metaterm_override,X,BA).
+system:metaterm_override(X,Atom):-atomic(Atom),!,system:metaterm_override(X,Atom:true([])).
+system:metaterm_override(X,Atom):-compound_name_arity(Atom,_,0),!,system:metaterm_override(X,Atom:true([])).
+system:metaterm_override(X,B:A):- to_pi(B,BPI),functor(BPI,_,AB),(atom(A)->functor(API,A,AB);to_pi(A,API)),!,system:metaterm_override(X,BPI,API).
+system:metaterm_override(X,B=A):-system:metaterm_override(X,B:A),!.
+system:metaterm_override(X,What):- put_atts(X,'$meta': + What).
+
+system:metaterm_override(X,BPI,API):- (get_attr(X,'$meta',W) ->true; W=[]),!,put_attr(X,'$meta',att(BPI,API,W)).
+
+
+system:metaterm_overriding(X,B=A):-system:metaterm_override(X,B:A).
+
 
 pair_modulize([], _) --> [].
 pair_modulize([G|Gs], M) --> !,
@@ -379,7 +383,9 @@ pair_get(Var,M,At):-
 
 pair_put(_,M,At):-var(At),!,throw(error(instantiation_error,put_pairs(M:At))).
 pair_put(Var,M,List):-is_list(List),!,pair_module(Var,M),maplist(pair_put(Var,M),List).
-pair_put(Var,M,+At):- !,pair_put(M,Var,At).
+pair_put(Var,M,+N=V):- !,pair_put(Var,M,N=V).
+pair_put(Var,M,-N=V):- !,pair_put(Var,M,-(N=V)).
+pair_put(Var,M,+At):- !,pair_put(Var,M,At).
 pair_put(Var,_,-(M:At)):- \+ meta_handler_name(M),!,pair_put(Var,M,-At).
 pair_put(Var,_, (M:At)):- \+ meta_handler_name(M), !,pair_put(Var,M,At).
 pair_put(Var,M,-Pair):-!,
@@ -418,17 +424,18 @@ set_dict_attvar_reader(X):-set_prolog_flag(set_dict_attvar_reader,X).
 
 
 dict_attvar(Dict):- dict_attvar(Dict,_),!.
-dict_attvar(_:Dict,Out):- \+ compound(Dict),!,Out=Dict.
-dict_attvar(Dict,Out):-
+
+dict_attvar(Dict,Out):- compound(Dict),!,Out=Dict.
+dict_attvar(M:Dict,M:Out):- \+ compound(Dict),!,Out=Dict.
+dict_attvar(M:Dict,Out):-
    is_dict(Dict),dict_pairs(Dict,M,Pairs),
    (atom(M)->pair_put(Out,M,Pairs);
    (var(M)-> (M=Out,put_pairs(Out,Pairs)))),!.
-dict_attvar(Dict,Out):- 
+dict_attvar(M:Dict,M:Out):- 
   compound_name_arguments(Dict,F,Args),
    maplist(dict_attvar,Args,ArgsO),!,
    compound_name_arguments(Out,F,ArgsO).
 
-meta_atts:verify_attributes(_,_,[]).
 
 % This type-checking predicate succeeds iff its argument is an ordinary free variable, it fails if it is an attributed variable.
 eclipse:free(X):-var(X),\+attvar(X).
@@ -444,7 +451,7 @@ add_attribute(Var, Attr):- put_atts(Var, Attr).
 
 % TODO  add_attribute(?Var, Attribute, AttrName):- put_atts(Var, Attr).
 % add_attribute(Var, Attr).
-'$atts':copy_handler(AttrVar, Copy):- duplicate_term(AttrVar,Copy).
+'$meta':copy_handler(AttrVar, Copy):- duplicate_term(AttrVar,Copy).
 
 :- meta_predicate(get_attribute(+,:)).
 get_attribute(Var, Attr):- get_atts(Var, Attr).
@@ -457,12 +464,13 @@ get_attribute(Var, Attr):- get_atts(Var, Attr).
  
 :- nodebug(matts).
 
-:- multifile('$atts':matts_hook/4).
-:- dynamic('$atts':matts_hook/4).
-'$atts':matts_hook(Pred,Var,Value,RetCode):- do_matts_hook(Pred,Var,Value,RetCode).
+:- multifile('$meta':matts_hook/4).
+:- dynamic('$meta':matts_hook/4).
+system:'$meta'(Pred,Var,Value,RetCode):- do_matts_hook(Pred,Var,Value,RetCode).
 
 get_hander(Var,Hook,Handler):- get_attr(Var,Hook,Handler).
 
+do_matts_hook('$undo_unify',Var,_Value,1):-get_attr(Var,'$undo_unify',G),!,G.
 % unbind return code
 do_matts_hook(Pred,Var,Value,RetCode):-nonvar(RetCode),!,do_matts_hook(Pred,Var,Value,RetCode0),RetCode0=RetCode.
 % print debug
@@ -478,6 +486,8 @@ do_matts_hook('==',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),BA==AA,!.
 do_matts_hook(Hook,A,B,1):-get_val(A,AA),w_hooks(call(Hook,AA,B)).
 do_matts_hook('==',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),!,BA=@=AA.
 do_matts_hook('=@=',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),!,BA=@=AA.
+do_matts_hook('=@=',A,B,1):-attrs_val(B,BA),attrs_val(A,AA),!,BA=@=AA.
+user:matts_hook('$undo_unify',_G529423,1,_G529487).
 
 compare_to_retcode(>,1).
 compare_to_retcode(<,-1).
@@ -503,8 +513,7 @@ get_val(A,AAA):-get_attr(A,gvar,AA),!,nb_linkval(AA,AAA).
 % ?- matts(_,+disable). % Disable entire system
 % ==
 
-matts(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matts_default'(_,XM)).
-'$matts_default'(G,S):-'$matts_default'(G,S,I,I).
+matts(Get,Set):- 'metaterm_options'(Get,Get),merge_fbs(Set,Get,XM),must_tst('metaterm_options'(_,XM)).
 
 
 %% matts(+Set) is det.
@@ -515,65 +524,27 @@ matts(Get,Set):- '$matts_default'(Get,Get),merge_fbs(Set,Get,XM),must_tst('$matt
 % ?-listing(fbs_for_hooks_default/1) to see them.
 % ==
 
-matts(X):- integer(X),!,'$matts_default'(_,X),matts.
-matts(X):- var(X),!,'$matts_default'(X,X).
-matts(X):- '$matts_default'(M,M),merge_fbs(X,M,XM),must_tst('$matts_default'(_,XM)),!,matts,!.
+matts(X):- integer(X),!,'metaterm_options'(_,X),matts.
+matts(X):- var(X),!,'metaterm_options'(X,X).
+matts(X):- 'metaterm_options'(M,M),merge_fbs(X,M,XM),must_tst('metaterm_options'(_,XM)),!,matts,!.
 
 
 fbs_for_hooks_default(v(
 
-/* '$atts' = 18 AttVarBitS: these bits in an prolog accessable  get_attr/3,putt_attr/3 need it fit in valInt()*/
-  no_bind              = 0x0001, "C should let wakeup/1 do binding",
-  no_wakeup            = 0x0002, "C should skip scheduling a $wakeup/1 ",
-  mid_unify            = 0x0004, "do_unify() has called unify",
-  peer_wakeup          = 0x0008, "attempt to schedule a wakeup on other attvar peers we unify with",
-  peer_trail           = 0x0010, "Those scheduled peers should trail assignment",
-  on_unify_keep_vars   = 0x0020, "whenever unifying with a plain variable send the variable to $wakeup/1 as the value",
-  unify                = 0x0020, "SAME AS ABOVE used in do_unify()",
-  on_unify_replace     = 0x0040, "UNUSED unify replace",
-  no_trail             = 0x0080, "Do not bother to trail the previous value",
-
-/* Overrides */
-  colon_eq         = 0x0100, "override(unify_vp) like on_unify_keep_vars except happens in unify_vp()",
-  bind             = 0x0200, "override(bind_const) like on_unify_keep_vars except happens in bindConst()",
-  strict_equal     = 0x0400, "Allows AttVars to implement their own structurally equivalence",
-  at_equals        = 0x0800, "Allows AttVars to implement their own variant-ness",
-  no_inherit     =  0x1000, "This AttVar doest not inherit from matts flags (otherwise they are or-ed)",
-  copy_term      =  0x2000, "override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
-  copy_term_nat  =  0x2000, "override(copy_term) would allow AttVars to implement their own copy.. (for constants like EmptySinkAttVars)",
-  compare        =  0x4000, "UNUSED override(compare) would allow AttVars to decide their non-standard ordering against each other",
-  disabled       =  0x8000, "Treat this AttVar as a non attributed variable (allow the system to operate recusively.. implies no_inherit) ",
-  check_vmi      = 0x010000, "LD->slow_unify might need tp be true for us to work (mostly for testing)",
-  vmi_ok         = 0x030000, "LD->slow_unify is/was not needed",
-  return_wake    = 0x040000, "saveWakeup before scheduling",
-  nonimmediate   = 0x080000, "run foreignWakeup immediatly after schedule",
-  spy            = 0x100000, "spy on matts",
-  debug          = 0x100000, "spy on matts",
-
-
-         % Aliases
-         override(=)  = override(unify),
-          variant = at_equals,
-         unify_vp = colon_eq,
-         override(==)  = override(strict_equal),
-         override(=@=)  = override(variant),
-         override(\=)  = override(unify),
-         override(\=@=)  = override(variant),
-         override(\==)  = override(strict_equal),
-
-         eagerly =(+override(bind)+override(unify_vp)+override(unify)+on_unify_keep_vars),
-         comparison =(+override(compare)+override(variant)+override(strict_equal)+override(unify)),
-         override_all = (+eagerly+comparison+override(copy_term)+peer_wakeup),
-         [] = 0,
-         sink_fluent=(+no_bind+peer_wakeup+eagerly), % no_inherit+
-         source_fluent=(+no_bind+peer_wakeup+override(unify)+on_unify_keep_vars+override(bind))
+/* '$meta' = 18 AttVarBitS: these bits in an prolog accessable  get_attr/3,putt_attr/3 need it fit in valInt()*/
+  enable_vmi              = 0x0001, "C should let wakeup/1 do binding",
+  enable_cpreds            = 0x0002, "C should skip scheduling a $wakeup/1 ",
+  skip_hidden            = 0x0004, "do_unify() has called unify",
+  enable_undo          = 0x0008, "attempt to schedule a wakeup on other attvar peers we unify with",
+  disabled             = 0x0080, "Do not bother to trail the previous value",
+  default = enable_vmi + enable_cpreds + skip_hidden
     )). 
 
 %% matts is det.
 %
 % Print the system global modes
 %
-matts:-'$matts_default'(M,M),any_to_fbs(M,B),format('~N~q.~n',[matts(M=B)]).
+matts:-'metaterm_options'(M,M),any_to_fbs(M,B),format('~N~q.~n',[matts(M=B)]).
 
 
 %% debug_hooks is det.
@@ -588,7 +559,7 @@ debug_hooks(_):- matts(-debug_hooks-debug_extreme).
 % Get matts properties
 %
 
-matts_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$atts',Modes)->any_to_fbs(Modes,BitsOut);BitsOut=0).
+matts_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$meta',Modes)->any_to_fbs(Modes,BitsOut);BitsOut=0).
 
 
 %%    matts_override(AttVar,BitsOut)
@@ -599,16 +570,16 @@ matts_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$atts',Modes)->any
 matts_override(AttVar,Modes):-
  notrace((wno_hooks((var(AttVar),
   ((
-   get_attr(AttVar,'$atts',Was)->
-       (merge_fbs(Modes,Was,Change),put_attr(AttVar,'$atts',Change)); 
-   (fbs_to_number(Modes,Number),put_attr(AttVar,'$atts',Number)))))))),!.
+   get_attr(AttVar,'$meta',Was)->
+       (merge_fbs(Modes,Was,Change),put_attr(AttVar,'$meta',Change)); 
+   (fbs_to_number(Modes,Number),put_attr(AttVar,'$meta',Number)))))))),!.
 
 
 %%    matts(+AttVar)
 %
 % Checks to see if a term has matts
 
-has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$atts',_)).
+has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$meta',_)).
 
 %%    new_matts(+Bits,-AttVar) is det.
 %
@@ -617,7 +588,6 @@ has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$atts',_)).
 new_matts(Bits,AttVar):-notrace((matts_override(AttVar,Bits))).
 
 
-'$atts':verify_attributes(_,_,[]).
 
 contains_fbs(AttVar,Bit):- any_to_fbs(AttVar,Bits),!,member(Bit,Bits).
 
@@ -625,7 +595,7 @@ contains_fbs(AttVar,Bit):- any_to_fbs(AttVar,Bits),!,member(Bit,Bits).
 any_to_fbs(BitsIn,BitsOut):- notrace((
  must((fbs_to_number(BitsIn,Mode),number(Mode))),
    Bits=[Mode],fbs_for_hooks_default(MASKS),
-   ignore((arg(_,MASKS,(N=V)),nonvar(V),nonvar(N),fbs_to_number(V,VV), VV is VV /\ Mode , matts_vars:nb_extend_list(Bits,N),fail)),!,
+   ignore((arg(_,MASKS,(N=V)),nonvar(V),nonvar(N),fbs_to_number(V,VV), VV is VV /\ Mode , meta_atts:nb_extend_list(Bits,N),fail)),!,
    BitsOut = Bits)).
 
 
@@ -633,7 +603,7 @@ nb_extend_list(List,E):-arg(2,List,Was),nb_setarg(2,List,[E|Was]).
 
 must_tst(G):- G*-> true; throw(must_tst_fail(G)).
 
-must_tst_det(G):- G,deterministic(Y),(Y==true->true;throw(must_tst_fail(G))).
+tst_det(G):- G,deterministic(Y),(Y==true->true;throw(must_tst_fail(G))).
 
 
 merge_fbs(V,VV,VVV):-number(V),catch((V < 0),_,fail),!, V0 is - V, merge_fbs(-(V0),VV,VVV),!.
@@ -686,9 +656,6 @@ while_goal(Before,Goal,After):-
   ).
 
 
-undo(G):- C=call(G),setup_call_cleanup(true,(true;(G,nb_setarg(1,C,true),fail)),C).
-
-
 mcc(Goal,CU):- Goal*-> CU ; (once(CU),fail).
 
 
@@ -696,25 +663,142 @@ mcc(Goal,CU):- Goal*-> CU ; (once(CU),fail).
 %
 % With inherited Hooks call Goal
 
-wi_atts(M,Goal):- notrace(('$matts_default'(W,W),merge_fbs(M,W,N))),!,while_goal('$matts_default'(W,N),Goal,'$matts_default'(_,W)).
+wi_atts(M,Goal):- notrace(('metaterm_options'(W,W),merge_fbs(M,W,N))),!,while_goal('metaterm_options'(W,N),Goal,'metaterm_options'(_,W)).
 
 %%    wo_hooks(+Var,+Goal)
 %
 % Without hooks on Var call Goal
 wo_hooks(Var,Goal):-
-  get_attr(Var,'$atts',W),T is W \/ 0x8000,!,
-   while_goal(put_attr(Var,'$atts',T),Goal,put_attr(Var,'$atts',W)).
+  get_attr(Var,'$meta',W),T is W \/ 0x80,!,
+   while_goal(put_attr(Var,'$meta',T),Goal,put_attr(Var,'$meta',W)).
 wo_hooks(_Var,Goal):-Goal.
 
 
 wno_dmvars(Goal):- wno_hooks(wno_debug(Goal)).
 w_dmvars(Goal):- w_hooks(w_debug(Goal)).
-wno_hooks(Goal):-  '$matts_default'(W,W),T is W \/ 0x8000, while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
-w_hooks(Goal):-  '$matts_default'(W,W),T is W  /\ \ 0x8000, while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
-wno_debug(Goal):-  '$matts_default'(W,W), T is W /\ \ 0x100000, while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
-w_debug(Goal):-  '$matts_default'(W,W),T is W  \/ 0x100000 , while_goal('$matts_default'(_,T),Goal,'$matts_default'(_,W)).
+wno_hooks(Goal):-  'metaterm_options'(W,W),T is W \/ 0x80, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
+w_hooks(Goal):-  'metaterm_options'(W,W),T is W  /\ \ 0x80, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
+wno_debug(Goal):-  'metaterm_options'(W,W), T is W /\ \ 0x100000, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
+w_debug(Goal):-  'metaterm_options'(W,W),T is W  \/ 0x100000 , while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
 
 testfv:-forall(test(T),dmsg(passed(T))).
+
+
+a1:verify_attributes(_,_,[]).
+a2:verify_attributes(_,_,[]).
+a3:verify_attributes(_,_,[]).
+
+
+test(cmp_fbs_variants0):- put_attr(X,'$meta',4),put_attr(Y,'$meta',4),wi_atts(+variant,X=@=Y).
+test(cmp_fbs_variants0a):- put_attr(X,a1,1),put_attr(X,'$meta',4),put_attr(Y,'$meta',4),wi_atts(+variant,X=@=Y).
+
+test(cmp_fbs_variants1):-
+  put_attr(X,a1,1),put_attr(X,a2,2),put_attr(X,'$meta',1),
+  put_attr(Y,'$meta',1),put_attr(Y,a1,1),put_attr(Y,'$meta',1),
+   wi_atts(+variant,X=@=Y).
+
+test(cmp_fbs_variants2):-
+ put_attr(X,a1,1),put_attr(X,a2,2),
+ matts_override(X,+variant),
+ matts_override(Y,+variant),X=@=Y.
+
+test(cmp_fbs_variants3):-
+ put_attr(X,'$meta',1),
+ put_attr(Y,'$meta',1),
+   wi_atts(+variant,X=@=Y).
+
+:- set_prolog_flag(atts_declared,auto).
+
+:-module_transparent(system:term_expansion/2).
+:-module_transparent(system:goal_expansion/2).
+system:term_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true),dict_attvar(Dict,X).
+system:goal_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true),dict_attvar(Dict,X).
+
+% :- set_dict_attvar_reader(true).
+
+
+:- matts(+15).
+
+
+/*
+:- use_module(library(logicmoo_utils)).
+
+:- system:reconsult('boot/attvar').
+
+
+?- put_atts(X,'$meta':'$undo_unify'()=true(_)),metaterm_overriding(X,'$undo_unify',Z).
+
+% Set =save_history= to =false= if you never want to save/restore the
+% command history.   Normally, the history is enabled if the system
+% provides a history and the input comes from a terminal.
+rtrace(put_atts(X,'$undo_unify'()=true(_)))
+
+% END - THESE ARE ONLY FOR TESTING - WILL BE REMOVED
+metaterm_overriding(X,'$undo_unify',Z).
+*/
+
+system:dmsg(M):- format(user_error,'~N~q.~n',[M]),flush_output(user_error).
+
+tst:verify_attributes(Var, Value, [dmsg(goal_for(Name))]) :- sformat(Name,'~w',Var), ignore(get_attr(Var, tst, Attr)),dmsg(tst:verify_attributes(Var,Value,attrs=Attr)).
+tst:attr_unify_hook(Attr, Value) :- dmsg(tst:attr_unify_hook(Attr, Value)),!,Value\==bad.
+tst:attr_undo_hook(Var, Attr, Value) :- dmsg(tst:attr_undo_hook(Var, Attr, Value)).
+
+system:tst(X):- put_attr(X,tst,123).
+system:av(X):- put_attr(X,tst,avc).
+
+% ?- meta_overide(X,print(X),(writeln('You wanted to print X'))), print(X).
+% ?- meta_overide(X,==(_,_),same_thing(
+
+system:pointers(X,Y):- dmsg(pointers(X,Y)).
+
+% ?- av(X),put_attr(X,'$meta',att(==(_,_),pointers(_,_),[])),'$find_override'(X,=(_,_),BAR),X==1.
+% ?- av(X),put_attr(X,'$meta',att(copy_term,pointers(_,_),[])),copy_term(X,Y).
+
+
+:- nb_setval('$meta',true).
+'$meta':verify_attributes(_,_,[]).
+'system':verify_attributes(_,_,[]).
+user:verify_attributes(_,_,[]).
+
+% ?-put_atts(X,'$undo_unify'(_)=true(_)),metaterm_overriding(X,'$undo_unify',_).
+
+           /*******************************
+           *	  ATTR UNDO HOOK	*
+
+
+?- metaterm_override(X,'$undo_unify'()),writeq(X),metaterm_overriding(X,'$undo_unify'(_,_),O).
+
+
+           *******************************/
+
+%%	post_unify(+Att3s, +Next, +Var, +Value)
+%
+%	Calls Module:attr_undo_hook(Var,Attrib,Binding) for each `Module` for which Var
+%	*had* an attribute.
+%
+%       TODO: Currently disabled for performance reasons
+/*
+
+system:'$undo_unify'(att(Module, AttVal, Rest), Next, Var, Value):- !,
+        Module:attr_undo_hook(Var, AttVal, Value),
+        '$undo_unify'(Rest, Next, Var, Value).
+
+system:'$undo_unify'(_, Next,Var, Value):- dmsg(undo(Var,Value)), call(Next).
+
+system:attr_undo_hook(_Var, _AttVal, _Value).
+
+*/
+
+% END - THESE ARE ONLY FOR TESTING - WILL BE REMOVED
+
+% av(X),put_attr(X,'$meta',att(==(_,_),pointers(_,_),[])),'$matts_flags'(Y,1),X==X.
+% :- set_prolog_flag(save_history, false).
+:-prolog_debug('MSG_CALL_RESIDUE_VARS'),prolog_debug('MSG_WAKEUPS').
+wd:- ((prolog_nodebug('MSG_VMI'),prolog_nodebug('MSG_WAKEUPS'))).
+:-wd.
+wd(X):-  prolog_debug('MSG_WAKEUPS'),prolog_debug('MSG_VMI'), call_cleanup(X,wd).
+
+% put_att_value(&gp[1],ATOM_true,makeRefL( valTermRef(id)));
 
 :- source_location(S,_),prolog_load_context(module,M),
  forall(source_file(M:H,S),
@@ -725,36 +809,4 @@ testfv:-forall(test(T),dmsg(passed(T))).
    ignore(((\+ atom_concat('$',_,F),export(F/A))))
    % ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A))),
    ))).
-
-a1:verify_attributes(_,_,[]).
-a2:verify_attributes(_,_,[]).
-a3:verify_attributes(_,_,[]).
-
-test(cmp_fbs_variants0):- put_attr(X,'$atts',4),put_attr(Y,'$atts',4),wi_atts(+variant,X=@=Y).
-test(cmp_fbs_variants0a):- put_attr(X,a1,1),put_attr(X,'$atts',4),put_attr(Y,'$atts',4),wi_atts(+variant,X=@=Y).
-
-test(cmp_fbs_variants1):-
-  put_attr(X,a1,1),put_attr(X,a2,2),put_attr(X,'$atts',1),
-  put_attr(Y,'$atts',1),put_attr(Y,a1,1),put_attr(Y,'$atts',1),
-   wi_atts(+variant,X=@=Y).
-
-test(cmp_fbs_variants2):-
- put_attr(X,a1,1),put_attr(X,a2,2),
- matts_override(X,+variant),
- matts_override(Y,+variant),X=@=Y.
-
-test(cmp_fbs_variants3):-
- put_attr(X,'$atts',1),
- put_attr(Y,'$atts',1),
-   wi_atts(+variant,X=@=Y).
-
-:- set_prolog_flag(atts_declared,auto).
-
-
-system:term_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true),dict_attvar(Dict,X).
-system:goal_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true),dict_attvar(Dict,X).
-
-% :- set_dict_attvar_reader(true).
-
-
 
