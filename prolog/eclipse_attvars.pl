@@ -466,7 +466,21 @@ get_attribute(Var, Attr):- get_atts(Var, Attr).
 
 :- multifile('$meta':matts_hook/4).
 :- dynamic('$meta':matts_hook/4).
-system:'$meta'(Pred,Var,Value,RetCode):- do_matts_hook(Pred,Var,Value,RetCode).
+user:'$meta'(Pred,Var,Value,RetCode):- do_matts_hook(Pred,Var,Value,RetCode).
+/* These will be moved out - mainly testing */
+system:compare_to_retcode(>,1).
+system:compare_to_retcode(<,-1).
+system:compare_to_retcode(==,0).
+
+:- meta_predicate(wnmt(:)).
+wnmt(G):-setup_call_cleanup(metaterm_options(W,0),G,metaterm_options(0,W)).
+:- module_transparent(system:'$meta'/4).
+system:'$meta'('==', Var, Value, 1):-!, wnmt(Var==Value). % this one ends up calling compare/3 
+system:'$meta'('=@=', Var, Value, 1):-!, wnmt(Var=@=Value).
+system:'$meta'(copy_term, Var, Value, 1):-!, wnmt(copy_term(Var,Value)).
+system:'$meta'(copy_term_nat, Var, Value, 1):-!, wnmt(copy_term_nat(Var,Value)).
+system:'$meta'(compare, Var, Value, RetCode):-!, wnmt(compare(Cmp,Var,Value)),compare_to_retcode(Cmp,RetCode).
+/* Above will be moved out - mainly testing */
 
 get_hander(Var,Hook,Handler):- get_attr(Var,Hook,Handler).
 
