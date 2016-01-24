@@ -88,9 +88,9 @@ num(6,423097) took 626.945 sec. % 4,915,103,733 inferences, 626.945 CPU in 627.5
 #swipl -O -l sat2.pl emu
 /* calls old AUH2 from VA3 */
 num(3,5403) (+3) took 6.305 sec. % 49,618,214 inferences, 6.307 CPU in 6.313 seconds (100% CPU, 7867227 Lips)
-num(4,30286) (+9) took 38.726 sec. % 303,339,445 inferences, 38.743 CPU in 38.783 seconds (100% CPU, 7829585 Lips)
+num(4,30286) (+11) took 38.726 sec. % 303,339,445 inferences, 38.743 CPU in 38.783 seconds (100% CPU, 7829585 Lips)
 num(5,125811) (+17) took 175.605 sec. % 1,361,215,617 inferences, 175.605 CPU in 175.792 seconds (100% CPU, 7751565 Lips)
-num(6,423125) (+27) took 637.541 sec. % 4,912,372,862 inferences, 637.541 CPU in 638.213 seconds (100% CPU, 7705185 Lips)
+num(6,423125) (+28) took 637.541 sec. % 4,912,372,862 inferences, 637.541 CPU in 638.213 seconds (100% CPU, 7705185 Lips)
 
 #swipl -O -l sat2.pl va3
 /* calls new VA3 */
