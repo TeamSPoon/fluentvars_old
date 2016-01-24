@@ -40,7 +40,7 @@
 */
 
 :- module(eclipse_attvars,[
-      meta/0,
+      matts/0,
       testfv/0, 
       test/1,
       w_debug/1,
@@ -57,14 +57,14 @@
       add_attr/3,
       any_to_fbs/2,
       has_hooks/1,
-      meta/1,
-      meta/2,
+      %matts/1,
+      %matts/2,
       meta_override/2,
       meta_overriding/2,
     add_attribute/2,
-    add_attribute/3,
+    %add_attribute/3,
     get_attribute/2,
-    get_attribute/3,
+    %get_attribute/3,
       merge_fbs/3,
       new_meta/2,
       fbs_to_number/2,
@@ -422,11 +422,11 @@ atts_module(Var,M):- get_attr(Var,M,Was)->assertion(is_list(Was));put_attr(Var,M
 
 atts_tmpl(At,Tmpl):-functor(At,F,A),functor(Tmpl,F,A).
 
-to_pi(unify,=(_,_)).
-to_pi(FA,PI):- compound(FA),compound_name_arity(FA,F,0),to_pi(F,PI),!.
-to_pi(F/A,PI):- atom(F),integer(A),A>0,compound_name_arity(PI,F,A).
-to_pi(F,PI):- atom(F),current_predicate( F /A),!,functor(PI,F,A).
-to_pi(PI,PI).
+to_pind(unify,=(_,_)).
+to_pind(FA,PI):- compound(FA),compound_name_arity(FA,F,0),to_pind(F,PI),!.
+to_pind(F/A,PI):- atom(F),integer(A),A>0,compound_name_arity(PI,F,A).
+to_pind(F,PI):- atom(F),current_predicate( F /A),!,functor(PI,F,A).
+to_pind(PI,PI).
 
 system:'$undo_unify'(Var,Value):-dmsg(system:'$undo_unify'(Var,Value)).
 
@@ -435,7 +435,7 @@ system:'$undo_unify'(Var,Value):-dmsg(system:'$undo_unify'(Var,Value)).
 system:meta_override(X,BA):- is_list(BA),!,maplist(system:meta_override,X,BA).
 system:meta_override(X,Atom):-atomic(Atom),!,system:meta_override(X,Atom:true([])).
 system:meta_override(X,Atom):-compound_name_arity(Atom,_,0),!,system:meta_override(X,Atom:true([])).
-system:meta_override(X,B:A):- to_pi(B,BPI),functor(BPI,_,AB),(atom(A)->functor(API,A,AB);to_pi(A,API)),!,system:meta_override(X,BPI,API).
+system:meta_override(X,B:A):- to_pind(B,BPI),functor(BPI,_,AB),(atom(A)->functor(API,A,AB);to_pind(A,API)),!,system:meta_override(X,BPI,API).
 system:meta_override(X,B=A):-system:meta_override(X,B:A),!.
 system:meta_override(X,What):- put_atts(X,'$meta': + What).
 
@@ -564,10 +564,10 @@ dict_attvar(Mod:Dict,Out):-
    compound_name_arguments(Out,F,ArgsO).
 
 % This type-checking predicate succeeds iff its argument is an ordinary free variable, it fails if it is an attributed variable.
-free(X):-var(X),\+attvar(X).
+eclipse:free(X):-var(X),\+attvar(X).
 
 % This type-checking predicate succeeds iff its argument is an attributed variable. For other type testing predicates an attributed variable behaves like a variable.
-meta(X):- attvar(X).
+eclipse:meta(X):- attvar(X).
 
 % A new attribute can be added to a variable using the tool predicate
 % add_attribute(Var, Attr).
@@ -580,7 +580,7 @@ add_attribute(Var,M,Attr):- atts_put(+,Var,M, Attr).
 get_attribute(Var, M:Attr):- atts_get(Var,M, Attr).
 get_attribute(Var, M, Attr):- atts_get(Var,M, Attr).
 
-:- nodebug(meta).
+:- nodebug(matts).
 
 :- multifile('$atts':meta_hook/4).
 :- dynamic('$atts':meta_hook/4).
@@ -656,29 +656,29 @@ dshowf(X,Y,Z):-dmsg(dshowf(X,Y,Z)),fail.
 dshowf(S,X,Y,Z):-dmsg(dshowf(S,X,Y,Z)),fail.
 
 
-%%	meta(+Get,+Set) is det.
+%%	matts(+Get,+Set) is det.
 %
-% Get/Set system wide meta modes
+% Get/Set system wide matts modes
 % Examples:
 %
 % ==
-% ?- meta(_,+disable). % Disable entire system
+% ?- matts(_,+disable). % Disable entire system
 % ==
 
 meta_get_set(Get,Set):- metaterm_options(Get,Get),merge_fbs(Set,Get,XM),tst(metaterm_options(_,XM)).
 
 
-%% meta(+Set) is det.
+%% matts(+Set) is det.
 %
-% Set system wide meta modes
+% Set system wide matts modes
 %
 % == 
 % ?-listing(fbs_for_hooks_default/1) to see them.
 % ==
 
-matts(X):- integer(X),!,'metaterm_options'(_,X),meta.
+matts(X):- integer(X),!,'metaterm_options'(_,X),matts.
 matts(X):- var(X),!,'metaterm_options'(X,X).
-matts(X):- 'metaterm_options'(M,M),merge_fbs(X,M,XM),tst('metaterm_options'(_,XM)),!,meta,!.
+matts(X):- 'metaterm_options'(M,M),merge_fbs(X,M,XM),tst('metaterm_options'(_,XM)),!,matts,!.
 
 
 fbs_for_hooks_default(v(
@@ -714,23 +714,23 @@ att_no_swap    = 0x08			," current only used in '$attvar_assign'/2 dm: but might
 
     )). 
 
-%% meta is det.
+%% matts is det.
 %
 % Print the system global modes
 %
-meta:-'metaterm_options'(M,M),any_to_fbs(M,B),format('~N~q.~n',[meta(M=B)]).
+matts:-'metaterm_options'(M,M),any_to_fbs(M,B),format('~N~q.~n',[matts(M=B)]).
 
 
 %% debug_hooks is det.
 %
 % Turn on extreme debugging
 %
-debug_hooks(true):-!, meta(+debug_hooks+debug_extreme).
-debug_hooks(_):- meta(-debug_hooks-debug_extreme).
+debug_hooks(true):-!, matts(+debug_hooks+debug_extreme).
+debug_hooks(_):- matts(-debug_hooks-debug_extreme).
 
 %%    meta_overriding(AttVar,BitsOut)
 %
-% Get meta properties
+% Get matts properties
 %
 
 dmeta_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$atts',Modes)->any_to_fbs(Modes,BitsOut);BitsOut=0).
@@ -738,7 +738,7 @@ dmeta_overriding(AttVar,BitsOut):- wno_hooks(get_attr(AttVar,'$atts',Modes)->any
 
 %%    meta_override(AttVar,BitsOut)
 %
-% Set meta properties
+% Set matts properties
 %
 
 dmeta_override(AttVar,Modes):-
@@ -749,15 +749,15 @@ dmeta_override(AttVar,Modes):-
    (fbs_to_number(Modes,Number),put_attr(AttVar,'$atts',Number)))))))),!.
 
 
-%%    meta(+AttVar)
+%%    matts(+AttVar)
 %
-% Checks to see if a term has meta
+% Checks to see if a term has matts
 
 has_hooks(AttVar):-wno_hooks(get_attr(AttVar,'$meta',_)).
 
 %%    new_meta(+Bits,-AttVar) is det.
 %
-% Create new meta with a given set of Overrides
+% Create new matts with a given set of Overrides
 
 new_meta(Bits,AttVar):-notrace((put_atts(AttVar,Bits))).
 
@@ -862,15 +862,6 @@ w_debug(Goal):-  'metaterm_options'(W,W),T is W  \/ 0x100000 , while_goal('metat
 
 testfv:-forall(test(T),dmsg(passed(T))).
 
-:- source_location(S,_),prolog_load_context(module,M),
- forall(source_file(M:H,S),
- ignore((functor(H,F,A),M\=vn,
-   \+ predicate_property(M:H,imported_from(_)),
-   \+ arg(_,[attr_unify_hook/2,'$pldoc'/4,'$mode'/2,attr_portray_hook/2,attribute_goals/3],F/A),
-   \+ atom_concat('_',_,F),
-   ignore(((\+ atom_concat('$',_,F),export(F/A))))
-   % ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A))),
-   ))).
 
 a1:verify_attributes(_,_,[]).
 a2:verify_attributes(_,_,[]).
@@ -904,13 +895,13 @@ system:goal_expansion(Dict,X):- current_prolog_flag(set_dict_attvar_reader,true)
 % :- set_dict_attvar_reader(true).
 
 
-:- meta.
+:- matts.
 
 
 /*
 :- use_module(library(logicmoo_utils)).
 
-:- system:reconsult('boot/attvar').
+% :- system:reconsult('boot/attvar').
 
 
 ?- put_atts(X,'$meta':'$undo_unify'()=true(_)),meta_overriding(X,'$undo_unify',Z).
@@ -941,6 +932,7 @@ system:pointers(X,Y):- dmsg(pointers(X,Y)).
 % ?- av(X),put_attr(X,'$meta',att(==(_,_),pointers(_,_),[])),'$find_override'(X,=(_,_),BAR),X==1.
 % ?- av(X),put_attr(X,'$meta',att(copy_term,pointers(_,_),[])),copy_term(X,Y).
 
+:-  set_prolog_flag(access_level,system).
 
 :- nb_setval('$meta',true).
 '$meta':verify_attributes(_,_,[]).
@@ -987,11 +979,11 @@ wd(X):-  prolog_debug('MSG_WAKEUPS'),prolog_debug('MSG_VMI'), call_cleanup(X,wd)
 
 % put_att_value(&gp[1],ATOM_true,makeRefL( valTermRef(id)));
 
-:- source_location(S,_),prolog_load_context(module,M),
+export_all:- source_location(S,_),prolog_load_context(module,M),
  forall(source_file(M:H,S),
  ignore((functor(H,F,A),M\=vn,
    \+ predicate_property(M:H,imported_from(_)),
-   \+ arg(_,[attr_unify_hook/2,'$pldoc'/4,'$mode'/2,attr_portray_hook/2,attribute_goals/3],F/A),
+   \+ arg(_,[foo:attr_unify_hook,foo:'$pldoc',foo:'$mode',foo:attr_portray_hook,foo:attribute_goals],foo:F),
    \+ atom_concat('_',_,F),
    ignore(((\+ atom_concat('$',_,F),export(F/A))))
    % ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A))),
