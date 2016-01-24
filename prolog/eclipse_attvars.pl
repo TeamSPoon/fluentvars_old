@@ -688,29 +688,27 @@ fbs_for_hooks_default(v(
 att_wakebinds  = 0x01			," bindconst() " ,
 att_assignonly = 0x02			," '$attvar_assign'/2 " ,
 att_unify      = 0x04			," unify: assign and wakeup " ,
-att_no_swap    = 0x08			," current only used in '$attvar_assign'/2 dm: but might need to be used in at least one or both the others  " ,
 
 
 		 /*******************************
 		 *	      METATERMS      	*
 		 *******************************/
 
- enable_vmi  	=0x0010 , " hook wam ", 
- enable_cpreds	=0x0020 , " hook cpreds (wam can misses a few)", 
- skip_hidden    =0x0040 , " dont factor $meta into attvar identity ", 
- enable_undo  	=0x0080 , " check attvars for undo hooks (perfomance checking) ", 
- do_unify  	    =0x0100 , " debugging for a moment trying to guage if damaging do_unify() ",                                  
-                              
- peer_wakeup  	=0x0200 , " wakeup peer attvars ", 
- keep_both  	=0x0400 , " allow attvar survival ", 
- move_atts  	=0x0800 , " move atts to survivor ", 
- no_bind        =0x1000 , " c should let wakeup/1 do binding ", 
- no_trail       =0x2000 , " do not bother to trail the previous value ", 
- no_inherit     =0x4000 , " this metaterm doest not inherit from 'meta_default' flags (otherwise they are or-ed) ", 
- disabled   	=0x8000 , " disable all options (allows the options to be saved) ", 
- default  	    = enable_vmi+skip_hidden+enable_cpreds+move_atts,
- no_wakeup      =0x02 , " c should skip scheduling a $wakeup/1  ", 
- peer_no_trail  =0x08 , " peer no trail "
+ peer_no_trail  = 0x0008 , " peer no trail ", 
+ no_bind        = 0x0010 , " c should let only prolog do binding ", 
+ no_wakeup  	= 0x0020 , " dont call wakeup ", 
+ no_trail       = 0x0040 , " do not bother to trail the previous value ", 
+ keep_both  	= 0x0080 , " allow attvar survival ", 
+
+ do_unify  	= 0x0100 , " debugging for a moment trying to guage if damaging do_unify() ",
+ no_inherit     = 0x0400 , " this metaterm doest not inherit from 'matts_default' flags (otherwise they are or-ed) ", 
+ disabled   	= 0x0800 , " disable all options (allows the options to be saved) ", 
+
+ enable_vmi  	= 0x1000 , " hook wam ", 
+ enable_cpreds	= 0x2000 , " hook cpreds (wam can misses a few)", 
+ skip_hidden  	= 0x4000 , " dont factor $meta into attvar identity ", 
+ enable_undo    = 0x8000 , " check attvars for undo hooks (perfomance checking) "
+
 
     )). 
 
@@ -848,15 +846,15 @@ wi_atts(M,Goal):- notrace(('metaterm_options'(W,W),merge_fbs(M,W,N))),!,while_go
 %
 % Without hooks on Var call Goal
 wo_hooks(Var,Goal):-
-  get_attr(Var,'$atts',W),T is W \/ 0x8000,!,
+  get_attr(Var,'$atts',W),T is W \/ 0x0800,!,
    while_goal(put_attr(Var,'$atts',T),Goal,put_attr(Var,'$atts',W)).
 wo_hooks(_Var,Goal):-Goal.
 
 
 wno_dmvars(Goal):- wno_hooks(wno_debug(Goal)).
 w_dmvars(Goal):- w_hooks(w_debug(Goal)).
-wno_hooks(Goal):-  'metaterm_options'(W,W),T is W \/ 0x8000, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
-w_hooks(Goal):-  'metaterm_options'(W,W),T is W  /\ \ 0x8000, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
+wno_hooks(Goal):-  'metaterm_options'(W,W),T is W \/ 0x0800, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
+w_hooks(Goal):-  'metaterm_options'(W,W),T is W  /\ \ 0x0800, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
 wno_debug(Goal):-  'metaterm_options'(W,W), T is W /\ \ 0x100000, while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
 w_debug(Goal):-  'metaterm_options'(W,W),T is W  \/ 0x100000 , while_goal('metaterm_options'(_,T),Goal,'metaterm_options'(_,W)).
 
@@ -915,14 +913,6 @@ rtrace(put_atts(X,'$undo_unify'()=true(_)))
 meta_overriding(X,'$undo_unify',Z).
 */
 
-system:dmsg(M):- format(user_error,'~N~q.~n',[M]),flush_output(user_error).
-
-tst:verify_attributes(Var, Value, [dmsg(goal_for(Name))]) :- sformat(Name,'~w',Var), ignore(get_attr(Var, tst, Attr)),dmsg(tst:verify_attributes(Var,Value,attrs=Attr)).
-tst:attr_unify_hook(Attr, Value) :- dmsg(tst:attr_unify_hook(Attr, Value)),!,Value\==bad.
-tst:attr_undo_hook(Var, Attr, Value) :- dmsg(tst:attr_undo_hook(Var, Attr, Value)).
-
-system:tst(X):- put_attr(X,tst,123).
-system:av(X):- put_attr(X,tst,avc).
 
 % ?- meta_overide(X,print(X),(writeln('You wanted to print X'))), print(X).
 % ?- meta_overide(X,==(_,_),same_thing(
@@ -937,7 +927,6 @@ system:pointers(X,Y):- dmsg(pointers(X,Y)).
 :- nb_setval('$meta',true).
 '$meta':verify_attributes(_,_,[]).
 '$atts':verify_attributes(_,_,[]).
-'system':verify_attributes(_,_,[]).
 
 % ?-put_atts(X,'$undo_unify'(_)=true(_)),meta_overriding(X,'$undo_unify',_).
 
@@ -988,4 +977,71 @@ export_all:- source_location(S,_),prolog_load_context(module,M),
    ignore(((\+ atom_concat('$',_,F),export(F/A))))
    % ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A))),
    ))).
+
+
+
+system:dmsg(M):- format(user_error,'~N~q.~n',[M]),flush_output(user_error).
+
+
+tAA:verify_attributes(Var, Value, [get_attrs(CVar,AttrsNow),dmsg(tAA:goal_for(Name,Attrs=AttrsNow))]):- sformat(Name,'~w',Var), ignore(get_attrs(Var,Attrs)),put_attrs(CVar,Attrs),dmsg(tAA:va(Var,Value,[])=Attrs).
+tBB:verify_attributes(Var, Value, [get_attrs(CVar,AttrsNow),dmsg(tBB:goal_for(Name,Attrs=AttrsNow))]):- sformat(Name,'~w',Var), ignore(get_attrs(Var,Attrs)),put_attrs(CVar,Attrs),dmsg(tBB:va(Var,Value,[])=Attrs).
+tCC:attr_unify_hook(Attr, Value) :- dmsg(tCC:attr_unify_hook(Attr, Value)),!,Value\==bad.
+
+
+
+tCC:attr_undo_hook(Var, Attr, Value) :- dmsg(tCC:attr_undo_hook(Var, Attr, Value)).
+
+system:va(X):- put_attr(X,tAA,'AAA').
+system:vb(X):- put_attr(X,tBB,'BBB').
+system:vc(X):- put_attr(X,tCC,'CCC').
+
+end_of_file.
+
+
+% swi prolog ignores peer wakeups ..
+The following putput is incorrect...
+
+Welcome to SWI-Prolog (Multi-threaded, 64 bits, Version 7.3.15-29-g6a6915a)
+Copyright (c) 1990-2015 University of Amsterdam, VU Amsterdam
+SWI-Prolog comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under certain conditions.
+Please visit http://www.swi-prolog.org for details.
+
+For help, use ?- help(Topic). or ?- apropos(Word).
+
+1 ?- va(A),vb(B),A=B.
+tBB:va(_G294746,_G294739,[])=att(tBB,'BBB',[]).
+tBB:goal_for("_G294746",att(tBB,'BBB',[])=att(tBB,'BBB',[])).
+A = B,
+put_attr(B, tAA, 'AAA').
+
+2 ?- vb(B),va(A),A=B.
+tAA:va(_G294734,_G294727,[])=att(tAA,'AAA',[]).
+tAA:goal_for("_G294734",att(tAA,'AAA',[])=att(tAA,'AAA',[])).
+B = A,
+put_attr(A, tBB, 'BBB').
+
+
+Here is this corrected...
+
+Welcome to SWI-Prolog (Multi-threaded, 64 bits, Version 7.3.15-33-g5524040-DIRTY)
+
+1 ?- va(A),vb(B),A=B.
+tAA:va(_G319347,_G319354,[])=att(tAA,'AAA',[]).
+tBB:va(_G319354,_G319347,[])=att(tBB,'BBB',[]).
+tBB:goal_for("_G319354",att(tBB,'BBB',[])=att(tBB,'BBB',[])).
+tAA:goal_for("_G319347",att(tAA,'AAA',[])=att(tAA,'AAA',[])).
+A = B,
+put_attr(B, tAA, 'AAA').
+
+2 ?- vb(B),va(A),A=B.
+
+tAA:va(_G319354,_G319347,[])=att(tAA,'AAA',[]).
+tBB:va(_G319347,_G319354,[])=att(tBB,'BBB',[]).
+tBB:goal_for("_G319347",att(tBB,'BBB',[])=att(tBB,'BBB',[])).
+tAA:goal_for("_G319354",att(tAA,'AAA',[])=att(tAA,'AAA',[])).
+B = A,
+put_attr(A, tBB, 'BBB').
+
+
 
