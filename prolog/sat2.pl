@@ -32,7 +32,7 @@ solve([A1,A2,A3,A4],[B1,B2,B3,B4],[C1,C2,C3,C4],[D1,D2,D3,D4]) :-
 :- mytime(num(X)),X=5400.
 
 % SWI 7.2.3 num(5400) took 5.035 sec.
-% SWI 7.1.15 num(5400) took 6.282 sec.
-% SWI 7.1.15-sinkvars num(5400) took 6.612 sec.
+% SWI 7.3.15 num(5400) took 6.282 sec.
+% SWI 7.3.15-sinkvars num(5400) took 6.612 sec.
 % Yap 6.2.2 num(5400) took 3.522 sec.
 % SICStus 4.3.2 (x86_64-linux-glibc2.12) -> num(5400) took 0.120 sec.
