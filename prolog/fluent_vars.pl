@@ -43,14 +43,14 @@
 %
 % Base class of "SinkFluent" that recieves bindings
 
-sink_fluent(Fluent):-matts_override(Fluent,+sink_fluent).
+sink_fluent(Fluent):-meta_override(Fluent,+sink_fluent).
 
 
 %%	source_fluent(-Fluent) is det.
 %
 % Base class of "SourceFluent" that creates bindings
 
-source_fluent(Fluent):-matts_override(Fluent,+source_fluent).
+source_fluent(Fluent):-meta_override(Fluent,+source_fluent).
 
 
 %%	dc_fluent(-Fluent) is det.
@@ -61,6 +61,6 @@ source_fluent(Fluent):-matts_override(Fluent,+source_fluent).
 % peer or otherwise
 % Tarau's "EmptySink" matts
 
-dc_fluent(Fluent):-matts_override(Fluent,no_wakeup+no_bind-peer_wakeup+no_disable).
+dc_fluent(Fluent):-meta_override(Fluent,no_wakeup+no_bind-peer_wakeup+no_disable).
 
 

@@ -1,7 +1,11 @@
 :- use_module(library(clpfd)).
 :- use_module(library(lists)).
 
-sat(X) :- X in 0..9.
+:- use_module(library(logicmoo_utils)).
+% so we can trace unification
+:- set_prolog_flag(access_level,system).
+
+sat(X) :- X in 0..5.
 
 num(L) :-
     solve(As,Bs,Cs,Ds),
@@ -29,4 +33,9 @@ mytime(G):- statistics(runtime, [T0|_]),
         T is T1 - T0,
         format('~q took ~3d sec.~n', [G,T]).
 
-:- mytime(num(_X)).
+wrong :-
+    solve(As,Bs,Cs,Ds),
+        append([As,Bs,Cs,Ds], Vs),
+    Vs = [0,2,4,3,4,4,1,0,5,3,0,1,0,0,4,5].
+
+run:- mytime(num(_X)).

@@ -3,8 +3,6 @@
 %emu=emulate attr_unify_hook/2
 %auh2=attr_unify_hook/2
 :- current_prolog_flag(argv,[W]),set_prolog_flag(clp,W).
-
-:- use_module(library(clpfd)).
 :- current_prolog_flag(dialect,sicstus) 
    -> 
     (use_module(library(lists)),
@@ -16,14 +14,17 @@ mytime(G):-
    ->  mytime0(G);time(mytime0(G)).
 
 mytime0(G):- statistics(runtime, [T0|_]),
-        G,
+        G,!,
         statistics(runtime, [T1|_]),
         T is T1 - T0,
         format('~q took ~3d sec.~n', [G,T]).
 
+
+:- use_module(library(clpfd)).
+
 sat(N,X) :- X in 0..N.
 
-num(L):- between(3,9,N),mytime(num(N,L)),fail.
+num(L):- between(3,6,N),time(num(N,L)),writeln(num(N=L)),fail.
 num(N,L) :-
     solve(N,As,Bs,Cs,Ds),
     append([As,Bs,Cs,Ds], Vs),
@@ -32,6 +33,8 @@ num(N,L) :-
 
 solve(N,[A1,A2,A3,A4],[B1,B2,B3,B4],[C1,C2,C3,C4],[D1,D2,D3,D4]) :-
     maplist(sat(N), [A1,A2,A3,A4,B1,B2,B3,B4,C1,C2,C3,C4,D1,D2,D3,D4]),
+    A1 #=< D4,
+    A1 #=< D1,
     A1 + A2 + A3 + A4 #= B1 + B2 + B3 + B4,
     A1 + A2 + A3 + A4 #= C1 + C2 + C3 + C4,
     A1 + A2 + A3 + A4 #= D1 + D2 + D3 + D4,
@@ -42,11 +45,17 @@ solve(N,[A1,A2,A3,A4],[B1,B2,B3,B4],[C1,C2,C3,C4],[D1,D2,D3,D4]) :-
     A1 + A2 + A3 + A4 #= A1 + B2 + C3 + D4,
     A1 + B2 + C3 + D4 #= A4 + B3 + C2 + D1.
 
-:- mytime(num(_)).
-
-
 
 end_of_file.
+
+?- time(num(4,_)).
+
+
+
+% :- mytime(num(_)).
+
+
+
 
 DM: replaced commas in text as to not confuse results to someone reading this file
 
@@ -54,24 +63,22 @@ DM: replaced commas in text as to not confuse results to someone reading this fi
 SICStus 4.3.2 (x86_64-linux-glibc2.12)
 
 #sicstus -l sat2.pl
-num(3=5400) took 0.120 sec.
-num(4=30277) took 0.650 sec.
-num(5=125794) took 2.910 sec.
-num(6=423097) took 10.400 sec.
+num(3=2492) took 0.060 sec.
+num(4=13240) took 0.250 sec.
+num(5=52400) took 1.130 sec.
+num(6=171220) took 4.000 sec.
 
-num(7=1214992) took 32.280 sec
-num(8=3089369) took 87.460 sec.
-num(9=7130034) took 215.500 sec.
 
 
 ========================================================================
-SWI 7.3.15-29-g6a6915a  ppa-devel/MASTER ( -O4? )
+SWI  Version 7.3.15-29-g6a6915a-DIRTY 
 
 #swipl15 -O -l sat2.pl va3
-num(3=5400) took 5.425 sec. % 50,104,712 inferences, 5.426 CPU in 5.428 seconds (100% CPU, 9233748 Lips)
-num(4=30277) took 33.825 sec. % 310,983,016 inferences, 33.839 CPU in 33.850 seconds (100% CPU, 9189966 Lips)
-num(5=125796) (+2) took 156.310 sec. % 1,409,290,490 inferences, 156.310 CPU in 156.358 seconds (100% CPU, 9015972 Lips)
-num(6=423130) (+33) took 564.377 sec. % 5,117,799,017 inferences, 564.377 CPU in 564.549 seconds (100% CPU, 9068050 Lips)
+num(3=2492) took 3.902 sec. % 22,168,440 inferences, 3.942 CPU in 3.944 seconds (100% CPU, 5624249 Lips)
+num(4=13240) took 22.779 sec.  % 128,174,772 inferences, 23.088 CPU in 23.103 seconds (100% CPU, 5551555 Lips)
+num(5=52400) took 99.521 sec. % 555,719,358 inferences, 99.522 CPU in 99.587 seconds (100% CPU, 5583897 Lips)
+num(6,171221) (+1?!) took 353.829 sec. % 1,971,478,876 inferences, 353.830 CPU in 354.076 seconds (100% CPU, 5571832 Lips)
+
 
 
 
