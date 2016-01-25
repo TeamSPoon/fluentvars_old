@@ -1,6 +1,8 @@
-Attributed Prolog variables that may remain (Free) attributed prolog variables even after unifying with nonvars! 
+Fluentvars is a more complete set of handlers for attributed variable operations, so that attributes are not only taken into account for unification, but also for other generic operations such as term copying and subsumption tests.
 
-This can work out fine when the programmer is thinking the goal was to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. The attributed variable does a "check" durring unification and "it decides" (using hooks) the ways in which it will be manipulated by the unification.
+The attributed variable durring unification decides (using hooks) the ways in which it will be manipulated by the unification.
+
+This can work out fine when the programmer is thinking the goal was to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. 
 
 Sound bizare?
 
