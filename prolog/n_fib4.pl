@@ -7,4 +7,4 @@ n_fib4(N, F) :-
     n_fib4(N1, F1), n_fib4(N2, F2),
     false.
 
-:- time(n_fib4(N, 8)).
+% :- time(n_fib4(N, 3)).

@@ -57,8 +57,8 @@
       add_attr/3,
       any_to_fbs/2,
       has_hooks/1,
-      %matts/1,
-      %matts/2,
+      matts/1,
+      matts/2,
       meta_override/2,
       meta_overriding/2,
     add_attribute/2,
@@ -671,7 +671,7 @@ dshowf(S,X,Y,Z):-dmsg(dshowf(S,X,Y,Z)),fail.
 % ?- matts(_,+disable). % Disable entire system
 % ==
 
-meta_get_set(Get,Set):- metaflag_options(Get,Get),merge_fbs(Set,Get,XM),tst(metaflag_options(_,XM)).
+matts(Get,Set):- metaflag_options(Get,Get),merge_fbs(Set,Get,XM),tst(metaflag_options(_,XM)).
 
 
 %% matts(+Set) is det.
