@@ -29,7 +29,6 @@
 */
 
 :- module(fluent_vars,[
-  
       sink_fluent/1,
       source_fluent/1,
       dc_fluent/1]).
@@ -43,14 +42,14 @@
 %
 % Base class of "SinkFluent" that recieves bindings
 
-sink_fluent(Fluent):-meta_override(Fluent,+sink_fluent).
+sink_fluent(Fluent):-put_atts(Fluent,+no_bind).
 
 
 %%	source_fluent(-Fluent) is det.
 %
 % Base class of "SourceFluent" that creates bindings
 
-source_fluent(Fluent):-meta_override(Fluent,+source_fluent).
+source_fluent(Fluent):-put_atts(Fluent,+no_bind).
 
 
 %%	dc_fluent(-Fluent) is det.
@@ -61,6 +60,6 @@ source_fluent(Fluent):-meta_override(Fluent,+source_fluent).
 % peer or otherwise
 % Tarau's "EmptySink" matts
 
-dc_fluent(Fluent):-meta_override(Fluent,no_wakeup+no_bind-peer_wakeup+no_disable).
+dc_fluent(Fluent):-put_atts(Fluent,no_wakeup+no_bind-peer_wakeup+no_disable).
 
 
