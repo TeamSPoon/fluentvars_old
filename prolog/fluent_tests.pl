@@ -44,7 +44,7 @@
    Some experiments ongoing
 
    With any of the above set the system still operates as normal
-              until the user invokes  '$matts_default'/2 to 
+              until the user invokes  'matts'/2 to 
 
    None of these option being enabled will cost more than 
               if( (LD->attrvar.matts & SOME_OPTION) != 0) ...
@@ -147,9 +147,6 @@ term_copier_filter(Fluent):-termfilter(Fluent),term_copier(Fluent).
 %
 
 
-
-
-
 %% plvar(-X) is det.
 %
 % Example of the well known "Prolog" variable!
@@ -172,15 +169,15 @@ term_copier_filter(Fluent):-termfilter(Fluent),term_copier(Fluent).
 % ==
 %
 /* if the new value is the same as the old value accept the unification*/
-%plvar(X):- put_atts(X,+keep_both),put_attr(X,plvar,binding(X,_)).
-%plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
 
+
+%plvar(Var):- put_atts(Var,+keep_both),put_attr(Var,plvar,binding(Var,_)).
+% plvar:verify_attributes(Var,Value,[]):- get_attr(Var,plvar,binding(Var,Prev)), Value=Prev, put_attr(Var,plvar,binding(Var,Value)).
 atts:metaterm_type(plvar).
-plvar(X):- put_attr(X,plvar,binding(X,_)).
-plvar:verify_attributes(Var,Value,[]):- 
-      get_attr(Var,plvar,binding(Var,Prev)),
-      Value=Prev,
-      get_attr(Var,plvar,binding(Var,Value)).
+
+plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
+plvar(Var):- source_fluent(Var), put_attr(Var,plvar,binding(Var,_)).
+
 
 
 %% subsumer_var(-X) is det.
@@ -458,14 +455,14 @@ show_var(N,V):- wno_dmvars(((((\+ attvar(V)) -> dmsg(N=V); (must_ts((get_attrs(V
 atts:metaterm_type(keep_both).
 keep_both(Fluent):- mkmeta(Fluent),put_atts(Fluent,+keep_both),keep_both.
 
-%% keep_both(Fluent) is det.
+%% use_do_unify(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
 atts:metaterm_type(use_do_unify).
 use_do_unify(Fluent):- mkmeta(Fluent),put_atts(Fluent,+use_do_unify),use_do_unify.
 
-%% keep_both(Fluent) is det.
+%% no_bind(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
@@ -473,15 +470,13 @@ atts:metaterm_type(no_bind).
 no_bind(Fluent):- mkmeta(Fluent),put_atts(Fluent,+no_bind).
 
 
-%% keep_both() is det.
-%
-% Aggressively make fluents unify with non fluents (instead of the other way arround)
-%
+
 use_do_unify:- matts(+use_do_unify+use_vmi).
 noeagerly:- override_none.
 keep_both:- matts(+keep_both+use_vmi).
 pass_ref:- matts(+keep_both).
-override_none:-  matts(-keep_both-use_do_unify).
+
+override_none:-  matts( -keep_both -use_do_unify).
 
 test123:verify_attributes(Fluent,_Value,[]):- member(Fluent,[default1,default2,default3]).
 % test123:attr_unify_hook(_,Value):- member(Value,[default1,default2,default3]).
@@ -640,3 +635,4 @@ v1(X,V) :- put_atts(V,X),show_var(V).
    ignore(((\+ atom_concat('$',_,F),export(F/A)))),
    ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A)))))).
 
+:- forall(lv,true).

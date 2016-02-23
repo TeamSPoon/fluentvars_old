@@ -4,9 +4,13 @@ The attributed variable durring unification decides (using hooks) the ways in wh
 
 The programmer programmer may make desisions this way in how to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. 
 
+Attributed Prolog variables that may remain (Free) attributed prolog variables even after unifying with nonvars! 
 
+This can work out fine when the programmer is thinking the goal was to deal with foreign (non prolog datatypes) such as xpce refs,  or pattern matchers,   .. The attributed variable does a "check" durring unification and "it decides" (using hooks) the ways in which it will be manipulated by the unification.
 
-Currently in nonral prolog this is true:  
+Sound bizare?
+
+Not so much, currently this is true:  
 
 ````
 ?-  freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Foo==break_me(cant).
@@ -23,7 +27,7 @@ X = a(3).
 ````
 
 
-This library will explores examples explores useful tricks that are available with TermSinks.
+This library will explores examples explores useful tricks and chicanery that are available with TermSinks.
 
 
 ````
