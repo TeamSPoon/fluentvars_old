@@ -30,6 +30,13 @@
    
   anything_once/1,termfilter/1,subsumer_var/1,plvar/1]).
 
+:- multifile(atts:metaterm_type/1).
+:- discontiguous(atts:metaterm_type/1).
+:- dynamic(atts:metaterm_type/1).
+
+:- multifile(fluent_tests:'$pldoc'/4).
+:- discontiguous(fluent_tests:'$pldoc'/4).
+:- dynamic(fluent_tests:'$pldoc'/4).
 
 
  /** <module> Test Module
@@ -40,7 +47,7 @@
               until the user invokes  '$matts_default'/2 to 
 
    None of these option being enabled will cost more than 
-              if( (LD->attrvar.matts_default & SOME_OPTION) != 0) ...
+              if( (LD->attrvar.matts & SOME_OPTION) != 0) ...
   
     
 */
@@ -101,6 +108,7 @@
 %  X = 3;
 %  No.
 %  ==
+% atts:metaterm_type(anything_once).
 anything_once(Var):- nonvar(Var) ->true; (get_attr(Var,nr,_)->true;put_attr(Var,nr,old_vals([]))).
 
 nr:attr_unify_hook(AttValue,VarValue):- AttValue=old_vals(Waz), \+ memberchk_same_q(VarValue,Waz),nb_setarg(1,AttValue,[VarValue|Waz]).
@@ -108,9 +116,30 @@ nr:attr_unify_hook(AttValue,VarValue):- AttValue=old_vals(Waz), \+ memberchk_sam
 
 %% termfilter(-X) is det.
 %
-% Filter that may produce a term (termsource/1)
+% Filter that may produce a term (source_fluent/1)
 %
-termfilter(X):-put_atts(X,-vmAssign+remainVar).
+atts:metaterm_type(termfilter).
+termfilter(G,X):-put_atts(X,+no_bind),put_attr(X,termfilter,G).
+termfilter(X):-termfilter(dshowf(term_filer(X)),X).
+termfilter:attr_unify_hook(Goal,Value):-call(Goal,Value).
+
+%% term_copier(Fluent) is det.
+%
+% Aggressively make Fluent unify with non fluents (instead of the other way arround)
+%
+atts:metaterm_type(term_copier).
+term_copier(Fluent):- mkmeta(Fluent),put_attr(Fluent,term_copier,Fluent), put_atts(Fluent, +no_bind +use_do_unify).
+term_copier:attr_unify_hook(Var,ValueIn):-
+   notrace((must((get_attr(Var,'$saved_atts',AttVal),
+   del_attr(Var,term_copier),
+   copy_term(Var,Value),put_attr(Value,'$atts',AttVal))))),
+   ValueIn=Value.
+  
+
+
+term_copier_filter(Goal,Fluent):-termfilter(Goal,Fluent),term_copier(Fluent).
+
+term_copier_filter(Fluent):-termfilter(Fluent),term_copier(Fluent).
 
 %% nb_termfilter(-X) is det.
 %
@@ -118,16 +147,19 @@ termfilter(X):-put_atts(X,-vmAssign+remainVar).
 %
 
 
+
+
+
 %% plvar(-X) is det.
 %
 % Example of the well known "Prolog" variable!
 %
-% Using a term sink to emulate a current prolog variable (note we cannot use remainVar)
+% Using a term sink to emulate a current prolog variable (note we cannot use keep_both)
 %
 % the code:
 % ==
 % /* if the new value is the same as the old value accept the unification*/
-% plvar(X):- termsource(X),put_attr(X,plvar,binding(X,_)).
+% plvar(X):- source_fluent(X),put_attr(X,plvar,binding(X,_)).
 % plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
 % ==
 %
@@ -140,9 +172,10 @@ termfilter(X):-put_atts(X,-vmAssign+remainVar).
 % ==
 %
 /* if the new value is the same as the old value accept the unification*/
-%plvar(X):- put_atts(X,+remainVar),put_attr(X,plvar,binding(X,_)).
+%plvar(X):- put_atts(X,+keep_both),put_attr(X,plvar,binding(X,_)).
 %plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
 
+atts:metaterm_type(plvar).
 plvar(X):- put_attr(X,plvar,binding(X,_)).
 plvar:verify_attributes(Var,Value,[]):- 
       get_attr(Var,plvar,binding(Var,Prev)),
@@ -155,7 +188,7 @@ plvar:verify_attributes(Var,Value,[]):-
 %  Each time it is bound, it potentially becomes less bound!
 %
 %
-% subsumer_var(X):- termsource(X),init_accumulate(X,subsumer_var,term_subsumer).
+% subsumer_var(X):- source_fluent(X),init_accumulate(X,subsumer_var,term_subsumer).
 %
 % ==
 %  ?-  subsumer_var(X), X= a(1), X = a(2).
@@ -171,8 +204,8 @@ plvar:verify_attributes(Var,Value,[]):-
 % false
 % ==
 %
-
-subsumer_var(X):- termsource(X),init_accumulate(X,pattern,term_subsumer).
+atts:metaterm_type(subsumer_var).
+subsumer_var(X):- source_fluent(X),init_accumulate(X,pattern,term_subsumer).
 
 matts_call(FluentFactory,Goal):-
    term_variables(Goal,Vs),
@@ -194,7 +227,7 @@ tst:verify_attributes(X, Value, [format('~N~q, ~n',[goal_for(Name)])]) :- sforma
 % Using a term sink to add numbers together
 %
 % ==
-% counter_var(X):- termsource(X),init_accumulate(X,numeric,plus).
+% counter_var(X):- source_fluent(X),init_accumulate(X,numeric,plus).
 % ==
 % 
 % ==
@@ -202,18 +235,20 @@ tst:verify_attributes(X, Value, [format('~N~q, ~n',[goal_for(Name)])]) :- sforma
 %  X = 2.
 % ==
 %
-counter_var(X):- termsource(X),init_accumulate(X,counter_var,plus).
+atts:metaterm_type(counter_var).
+counter_var(X):- source_fluent(X),init_accumulate(X,counter_var,plus).
 
 
 %% nb_var(+X) is det.
 %
 % Using prolog variable that is stored as a global (for later use)
 %
-% nb_var/1 code above doesnt call nb_var/2 (since termsource/1 needs called before call we call format/3 .. promotes a _L666 varable to _G666 )
-nb_var(V):- termsource(V), format(atom(N),'~q',[V]),nb_linkval(N,V),put_attr(V,nb_var,N),nb_linkval(N,V).
+% nb_var/1 code above doesnt call nb_var/2 (since source_fluent/1 needs called before call we call format/3 .. promotes a _L666 varable to _G666 )
+atts:metaterm_type(nb_var).
+nb_var(V):- source_fluent(V), format(atom(N),'~q',[V]),nb_linkval(N,V),put_attr(V,nb_var,N),nb_linkval(N,V).
 nb_var:attr_unify_hook(N,Value):-
        nb_getval(N,Prev),
-       ( % This is how we produce a binding for +termsource "iterator"
+       ( % This is how we produce a binding for +source_fluent "iterator"
           (var(Value),nonvar(Prev)) ->  Value=Prev;
          % same binding (effectively)
              Value==Prev->true;
@@ -238,7 +273,7 @@ nb_var:attr_unify_hook(N,Value):-
 %
 %  
 % ==
-nb_var(N, V):- termsource(V), nb_linkval(N,V),put_attr(V,nb_var,N),nb_linkval(N,V).
+nb_var(N, V):- source_fluent(V), nb_linkval(N,V),put_attr(V,nb_var,N),nb_linkval(N,V).
 
 
 :-'$debuglevel'(_,0).
@@ -336,7 +371,7 @@ t1:- must_ts(rtrace((when(nonvar(X),member(X,[a(1),a(2),a(3)])),!,findall(X,X=a(
 
 t2:- must_ts(rtrace( (freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Foo==break_me(cant)))).
 
-% :- eagerly.
+% :- use_do_unify.
 
 
 /* This tells C, even when asked, to not do bindings (yet) 
@@ -370,16 +405,17 @@ t2:- must_ts(rtrace( (freeze(Foo,setarg(1,Foo,cant)),  Foo=break_me(borken), Foo
 
 must_ts(G):- !, must(G).
 must_ts(G):- G*-> true; throw(must_ts_fail(G)).
-must_ts_det(G):- G,deterministic(Y),(Y==true->true;throw(must_ts_fail(G))).
+must_ts_det(G):- !, must(G),!.
+must_ts_det(G):- G,deterministic(Y),(Y==true->true;throw(must_ts_fail_det(G))).
 
-do_test_type(Type):- writeln(maplist_local=Type+X),  
+do_test_type(MType):- strip_module(MType,_M,Type), atts:metaterm_type(Type), writeln(maplist_local=Type+X),  
    call(Type,X),
   maplist_local(=(X),[1,2,3,3,3,1,2,3]),
   writeln(value=X),  
   var_info(X).
   
 
-do_test_type(Type):- 
+do_test_type(MType):- strip_module(MType,_M,Type),atts:metaterm_type(Type), 
   once((writeln(vartype=call(Type,X)),  
       call(Type,X),
       ignore((member(X,[1,2,3,3,3,1,2,3]),writeln(Type=X),
@@ -387,7 +423,7 @@ do_test_type(Type):-
       fail)),
       writeln(value=X))),var_info(X).
 
-tv123(B):-matts_override(X,B),t123(X).
+tv123(B):-put_atts(X,B),t123(X).
 t123(X):- print_var(xbefore=X),L=link_term(X,Y,Z),dmsg(before=L),
   ignore((
    X=1,X=1,ignore(show_call(X=2)),w_debug(Y=X),w_debug(X=Z),print_var(x=X),
@@ -415,34 +451,37 @@ show_var(N,V):- wno_dmvars(((((\+ attvar(V)) -> dmsg(N=V); (must_ts((get_attrs(V
 
 % https://github.com/Muffo/aiswi/blob/master/sciff/quant.pl
 
-%% override_all(Fluent) is det.
+%% keep_both(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
-override_all(Fluent):- matts_override(Fluent,+override_all),override_all.
+atts:metaterm_type(keep_both).
+keep_both(Fluent):- mkmeta(Fluent),put_atts(Fluent,+keep_both),keep_both.
 
-%% override_all(Fluent) is det.
+%% keep_both(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
-eagerly(Fluent):- matts_override(Fluent,+eagerly),eagerly.
+atts:metaterm_type(use_do_unify).
+use_do_unify(Fluent):- mkmeta(Fluent),put_atts(Fluent,+use_do_unify),use_do_unify.
 
-%% override_all(Fluent) is det.
+%% keep_both(Fluent) is det.
 %
 % Aggressively make Fluent unify with non fluents (instead of the other way arround)
 %
-no_bind(Fluent):- matts_override(Fluent,+no_bind).
+atts:metaterm_type(no_bind).
+no_bind(Fluent):- mkmeta(Fluent),put_atts(Fluent,+no_bind).
 
 
-%% override_all() is det.
+%% keep_both() is det.
 %
 % Aggressively make fluents unify with non fluents (instead of the other way arround)
 %
-eagerly:- matts_default(+eagerly+check_vmi).
+use_do_unify:- matts(+use_do_unify+use_vmi).
 noeagerly:- override_none.
-override_all:- matts_default(+override_all+check_vmi).
-pass_ref:- matts_default(+on_unify_replace).
-override_none:-  matts_default(-override_all-eagerly).
+keep_both:- matts(+keep_both+use_vmi).
+pass_ref:- matts(+keep_both).
+override_none:-  matts(-keep_both-use_do_unify).
 
 test123:verify_attributes(Fluent,_Value,[]):- member(Fluent,[default1,default2,default3]).
 % test123:attr_unify_hook(_,Value):- member(Value,[default1,default2,default3]).
@@ -505,7 +544,9 @@ memb_r(X, List) :- Hold=hold(List), !, throw(broken_memb_r(X, List)),
 %  ==
 mv:attr_unify_hook(AttValue,FluentValue):- AttValue=old_vals(Waz),nb_setarg(1,AttValue,[FluentValue|Waz]).
 
-memory_var(Fluent):- nonvar(Fluent) ->true; (get_attr(Fluent,mv,_)->true;put_attr(Fluent,mv,old_vals([]))).
+atts:metaterm_type(memory_var).
+memory_var(Fluent):- mkmeta(Fluent),nonvar(Fluent) ->true; (get_attr(Fluent,mv,_)->true;put_attr(Fluent,mv,old_vals([]))).
+
 
 tst_ft(memory_var):- memory_var(X),  ignore((member(X,[1,2,3,3,3,1,2,3]),writeln(memory_var=X),fail)),get_attrs(X,Attrs),writeln(get_attrs=Attrs).
 
@@ -523,8 +564,9 @@ tst_ft(memory_var):- memory_var(X),  ignore((member(X,[1,2,3,3,3,1,2,3]),writeln
 %  X = 3;
 %  No.
 %  ==
-% memory_fluent(Fluent):-matts_override(Sink,[]), put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
-memory_fluent(Fluent):-matts_override(Fluent,[]),put_attr(Fluent,'_',Fluent),put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
+% memory_fluent(Fluent):-put_atts(Sink,[]), put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
+atts:metaterm_type(memory_fluent).
+memory_fluent(Fluent):-put_atts(Fluent,[]),put_attr(Fluent,'_',Fluent),put_attr(Sink,zar,Sink),memory_var(Fluent),Fluent=Sink.
 
 
 
@@ -545,7 +587,7 @@ memory_fluent(Fluent):-matts_override(Fluent,[]),put_attr(Fluent,'_',Fluent),put
 
 :- debug(_).
 % :- debug_fluents.
-% :- override_all.
+% :- keep_both.
 :- debug(fluents).
 
 :-export(demo_nb_linkval/1).
@@ -578,7 +620,7 @@ memory_fluent(Fluent):-matts_override(Fluent,[]),put_attr(Fluent,'_',Fluent),put
 
 */
 
-v1(X,V) :- matts_override(V,X),show_var(V).
+v1(X,V) :- put_atts(V,X),show_var(V).
 
 
 

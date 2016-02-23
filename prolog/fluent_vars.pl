@@ -42,14 +42,14 @@
 %
 % Base class of "SinkFluent" that recieves bindings
 
-sink_fluent(Fluent):-put_atts(Fluent,+no_bind).
+sink_fluent(Fluent):-mkmeta(Fluent),put_atts(Fluent,+no_bind).
 
 
 %%	source_fluent(-Fluent) is det.
 %
 % Base class of "SourceFluent" that creates bindings
 
-source_fluent(Fluent):-put_atts(Fluent,+no_bind).
+source_fluent(Fluent):-mkmeta(Fluent),put_atts(Fluent,+no_bind).
 
 
 %%	dc_fluent(-Fluent) is det.
@@ -60,6 +60,6 @@ source_fluent(Fluent):-put_atts(Fluent,+no_bind).
 % peer or otherwise
 % Tarau's "EmptySink" matts
 
-dc_fluent(Fluent):-put_atts(Fluent,no_wakeup+no_bind-peer_wakeup+no_disable).
+dc_fluent(Fluent):-mkmeta(Fluent),put_atts(Fluent,+no_wakeup+no_bind+no_trail).
 
 
