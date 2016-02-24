@@ -56,7 +56,7 @@
 :- meta_predicate matts_call(1,0).
 
 
-:- use_module(library(atts)).
+:- user:use_module(library(atts)).
 % :- user:use_module(library(eclipse_attvars)).
 
 :- debug(_).
@@ -302,8 +302,10 @@ q(A,B):-ab(A,B),xy(A,B).
 % 3) Set the unifyp attribute to the Pred.
 set_unifyp(Pred,Fluent):- wno_dmvars((source_fluent(Fluent),put_attr(Fluent,unifyp,binding(Pred,Fluent,_Uknown)))).
 
+unifyp:attr_unify_hook(binding(Pred,Fluent,Prev),Value):- unifyp:unify_hook(binding(Pred,Fluent,Prev),Value).
+
 % Our implimentation of a unifyp variable
-unifyp:attr_unify_hook(binding(Pred,Fluent,Prev),Value):- 
+unifyp:unify_hook(binding(Pred,Fluent,Prev),Value):- 
         % This is how we produce a binding for +source_fluent "on_unify_keep_vars"
           (var(Value),nonvar(Prev)) ->  Value=Prev;
          % same binding (effectively)
@@ -631,4 +633,5 @@ v1(X,V) :- put_atts(V,X),show_var(V).
    ignore(((\+ atom_concat('$',_,F),export(F/A)))),
    ignore((\+ predicate_property(M:H,transparent), M:module_transparent(M:F/A)))))).
 
+% :- set_prolog_flag(dmiles,true).
 :- forall(lv,true).
