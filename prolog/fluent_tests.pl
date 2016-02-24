@@ -56,7 +56,6 @@
 :- meta_predicate matts_call(1,0).
 
 
-:- use_module(library(fluent_vars)).
 :- use_module(library(atts)).
 % :- user:use_module(library(eclipse_attvars)).
 
@@ -151,7 +150,7 @@ term_copier_filter(Fluent):-termfilter(Fluent),term_copier(Fluent).
 %
 % Example of the well known "Prolog" variable!
 %
-% Using a term sink to emulate a current prolog variable (note we cannot use keep_both)
+% Using a term sink to emulate a current prolog variable (note we cannot use +no_bind)
 %
 % the code:
 % ==
@@ -175,7 +174,7 @@ term_copier_filter(Fluent):-termfilter(Fluent),term_copier(Fluent).
 % plvar:verify_attributes(Var,Value,[]):- get_attr(Var,plvar,binding(Var,Prev)), Value=Prev, put_attr(Var,plvar,binding(Var,Value)).
 atts:metaterm_type(plvar).
 
-plvar:attr_unify_hook(binding(Var,Prev),Value):-  Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
+plvar:attr_unify_hook(binding(Var,Prev),Value):- Value=Prev,put_attr(Var,plvar,binding(Var,Value)).
 plvar(Var):- source_fluent(Var), put_attr(Var,plvar,binding(Var,_)).
 
 
@@ -293,8 +292,6 @@ equals(b3,y3).
 
 q(A,B):-ab(A,B),xy(A,B).
 
-:- user:use_module(fluent_vars).
-
 %% set_unifyp(+Pred,?Fluent) is det.
 %
 % Create or alter a Prolog variable to have overrideed unification
@@ -312,14 +309,14 @@ unifyp:attr_unify_hook(binding(Pred,Fluent,Prev),Value):-
          % same binding (effectively)
              Value==Prev->true;
          % unification we will update the internal value
-             Value=Prev->put_attr(Fluent,plvar,binding(Fluent,Value));
+             Value=Prev->put_attr(Fluent,unifyp,binding(Pred,Fluent,Value));
          % Check if out override was ok
              call(Pred,Prev,Value) -> true;
          % Symmetrically if out override was ok
              call(Pred,Value,Prev)-> true.
 
 label_sources(A,B):-label_sources(A),label_sources(B).
-label_sources( Fluent):- get_attr(Fluent,plvar,binding(Fluent,Value)),!,del_attr(Fluent,unifyp),put_atts(Fluent,-no_bind),Fluent=Value.
+label_sources( Fluent):- get_attr(Fluent,unifyp,binding(_,Fluent,Value)),!,del_attr(Fluent,unifyp),put_atts(Fluent,-no_bind),Fluent=Value.
 label_sources(_Fluent):-!.
 
 lv:- matts_call(set_unifyp(equals),q(A,B)),label_sources(A,B),dmsg(q(A,B)).
@@ -475,8 +472,7 @@ use_do_unify:- matts(+use_do_unify+use_vmi).
 noeagerly:- override_none.
 keep_both:- matts(+keep_both+use_vmi).
 pass_ref:- matts(+keep_both).
-
-override_none:-  matts( -keep_both -use_do_unify).
+override_none:-  matts(-keep_both -use_do_unify).
 
 test123:verify_attributes(Fluent,_Value,[]):- member(Fluent,[default1,default2,default3]).
 % test123:attr_unify_hook(_,Value):- member(Value,[default1,default2,default3]).
@@ -540,7 +536,7 @@ memb_r(X, List) :- Hold=hold(List), !, throw(broken_memb_r(X, List)),
 mv:attr_unify_hook(AttValue,FluentValue):- AttValue=old_vals(Waz),nb_setarg(1,AttValue,[FluentValue|Waz]).
 
 atts:metaterm_type(memory_var).
-memory_var(Fluent):- mkmeta(Fluent),nonvar(Fluent) ->true; (get_attr(Fluent,mv,_)->true;put_attr(Fluent,mv,old_vals([]))).
+memory_var(Fluent):- mkmeta(Fluent), (nonvar(Fluent) ->true; (get_attr(Fluent,mv,_)->true;put_attr(Fluent,mv,old_vals([])))).
 
 
 tst_ft(memory_var):- memory_var(X),  ignore((member(X,[1,2,3,3,3,1,2,3]),writeln(memory_var=X),fail)),get_attrs(X,Attrs),writeln(get_attrs=Attrs).
