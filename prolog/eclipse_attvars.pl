@@ -704,7 +704,7 @@ att_unify      = 0x04			," unify: assign and wakeup " ,
  no_bind        = 0x0010 , " c should let only prolog do binding ", 
  no_wakeup  	= 0x0020 , " dont call wakeup ", 
  no_trail       = 0x0040 , " do not bother to trail the previous value ", 
- keep_both  	= 0x0080 , " allow attvar survival ", 
+ meta_source  	= 0x0080 , " allow attvar survival ", 
 
  do_unify  	= 0x0100 , " debugging for a moment trying to guage if damaging do_unify() ",
  no_inherit     = 0x0400 , " this metaterm doest not inherit from 'matts_default' flags (otherwise they are or-ed) ", 
